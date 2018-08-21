@@ -242,7 +242,7 @@ def gen_dtu_resized_path(dtu_data_folder, mode='training'):
     for i in data_set:
 
         image_folder = os.path.join(dtu_data_folder, ('Rectified/scan%d_train' % i))
-        cam_folder = os.path.join(dtu_data_folder, 'Cameras/train')
+        cam_folder = os.path.join(dtu_data_folder, 'Cameras/')
         depth_folder = os.path.join(dtu_data_folder, ('Depths/scan%d_train' % i))
 
         if mode == 'training':
