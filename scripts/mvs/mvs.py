@@ -37,7 +37,7 @@ class MVS:
             camera_name_hash[camera.name] = mvs_camera
 
             image_file_path = path.join(image_path, '{}.jpg'.format(camera.name))
-            mvs_camera.read_image_file(image_file_path)
+            mvs_camera.set_image_file(image_file_path)
 
             self.cameras.append(mvs_camera)
         num_cameras = len(self.cameras)
@@ -45,9 +45,10 @@ class MVS:
 
         # compute score map
         score_map = np.zeros((num_cameras, num_cameras))
-        for i in range(0, num_cameras - 1):
+        for i in range(0, num_cameras):
             nvm_camera1 = nvm_object.cameras[i]
             logging.info('[TRANSLATE MVS] On Camera {} / {}'.format(i+1, num_cameras))
+            logging.info('features: {}'.format(len(nvm_camera1.features.keys())))
             for feature_index, point in nvm_camera1.features.iteritems():
                 for camera_name, camera in point.cameras.iteritems():
                     if camera_name == nvm_camera1.name:

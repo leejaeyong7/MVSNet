@@ -1,4 +1,5 @@
 from os import path
+from shutil import copyfile
 
 import cv2
 import numpy as np
@@ -11,10 +12,10 @@ class MVSCamera(Camera):
         self.index = index
         self.depth_min = depth_min
         self.depth_interval = depth_interval
-        self.image_data = None
+        self.image_path = None
 
-    def read_image_file(self, file_path):
-        self.image_data = cv2.imread(file_path)
+    def set_image_file(self, file_path):
+        self.image_path = file_path
 
     def to_string(self):
         return '\n'.join([
@@ -36,9 +37,9 @@ class MVSCamera(Camera):
     def to_file(self, output_path):
         image_file_name = '{:08d}.jpg'.format(self.index)
         image_file_path = path.join(output_path, 'images', image_file_name)
-        # write image iff exists
-        if(not self.image_data):
-            cv2.imwrite(image_file_path, self.image_data)
+        # write image iff path exists
+        if(self.image_path):
+            copyfile(self.image_path, image_file_path)
         else:
             raise Exception('No image found')
 
