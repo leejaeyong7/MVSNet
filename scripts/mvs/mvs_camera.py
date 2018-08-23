@@ -30,7 +30,8 @@ class MVSCamera(Camera):
             ' '.join(str(i) for i in self.intrinsic[1]),
             ' '.join(str(i) for i in self.intrinsic[2]),
             '',
-            '{} {}'.format(self.depth_min, self.depth_interval)
+            '{} {}'.format(self.depth_min, self.depth_interval),
+            ''
         ])
         
 

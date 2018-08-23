@@ -29,8 +29,8 @@ class MVS:
             intrinsic = camera.get_intrinsic()
             fx = intrinsic[0,0]
             fy = intrinsic[1,1]
-            cx = intrinsic[2,0]
-            cy = intrinsic[2,1]
+            cx = intrinsic[0,2]
+            cy = intrinsic[1,2]
 
             mvs_camera = MVSCamera(i, pos, rot, fx, fy, cx, cy,
                                    self.depth_min, self.depth_interval)
@@ -59,11 +59,10 @@ class MVS:
                     mvs_camera2_index = mvs_camera2.index
                     pos_diff1 = mvs_camera1.get_position().to_array() - point.to_array()
                     pos_diff2 = mvs_camera2.get_position().to_array() - point.to_array()
-                    pos_abs1 = np.dot(pos_diff1, pos_diff1)
-                    pos_abs2 = np.dot(pos_diff2, pos_diff2)
+                    pos_abs1 = math.sqrt(np.dot(pos_diff1, pos_diff1))
+                    pos_abs2 = math.sqrt(np.dot(pos_diff2, pos_diff2))
                     dot = np.dot(pos_diff1, pos_diff2) / (pos_abs1 * pos_abs2)
-                    theta_i_j = math.acos(dot)
-
+                    theta_i_j = (180 / math.pi) * math.acos(dot)
                     score = self.get_score(theta_i_j)
                     score_map[mvs_camera1_index, mvs_camera2_index] += score
 
@@ -72,7 +71,7 @@ class MVS:
 
     def get_score(self, theta_i_j, theta_0=5, sigma_1=1, sigma_2=10):
         numerator = -1 * pow((theta_i_j - theta_0), 2)
-        if(theta_i_j <= 0):
+        if(theta_i_j <= theta_0):
             denominator = 2 * pow(sigma_1, 2)
         else:
             denominator = 2 * pow(sigma_2, 2)

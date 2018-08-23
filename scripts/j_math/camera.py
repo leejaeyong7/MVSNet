@@ -15,16 +15,34 @@ class Camera:
         self.set_distortion(k1, k2, p1, p2, k3)
 
     def get_position(self):
-        return Point().from_array(self.extrinsic[3, 0:3])
+        ''' returns camera center
+        NOTE)
+        R = Rc ^T
+        t = -RC
+        C = -Rc t
+        return C
+        '''
+        rot_c = self.extrinsic[0:3, 0:3]
+        trans = self.extrinsic[0:3, 3]
+        cc = -np.matmul(rot_c, trans)
+        return Point().from_array(cc)
 
     def get_rotation(self):
-        return Rotation().from_matrix(self.extrinsic[0:3, 0:3])
+        return Rotation().from_matrix(np.transpose(self.extrinsic[0:3, 0:3]))
 
     def set_position(self, position):
-        self.extrinsic[3, 0:3] = position.to_array()
+        ''' sets camera position from camera center '''
+        rot_c = self.extrinsic[0:3, 0:3]
+        rot = np.transpose(rot_c)
+        cc = position.to_array()
+        trans = -np.matmul(rot, cc)
+        self.extrinsic[0:3, 3] = trans
 
     def set_rotation(self, rotation):
-        self.extrinsic[0:3, 0:3] = rotation.to_matrix()
+        # on updating rotation, we need to update translation too
+        pos = self.get_position()
+        self.extrinsic[0:3, 0:3] = np.transpose(rotation.to_matrix())
+        self.set_position(pos)
 
     def get_intrinsic(self):
         return self.intrinsic

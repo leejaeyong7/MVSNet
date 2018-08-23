@@ -1,5 +1,7 @@
 import logging
 import numpy as np
+from PIL import Image
+from os import path
 
 from nvm_camera import NVMCamera
 from nvm_point import NVMPoint
@@ -26,7 +28,7 @@ class NVMModel:
         self.cameras = []
         self.points = []
 
-    def from_file(self, nvm_file):
+    def from_file(self, nvm_file, image_path):
         '''Given file object, reads lines and creates NVM object'''
         # first get number of cameras
         num_camera_str = nvm_file.readline().strip()
@@ -39,7 +41,7 @@ class NVMModel:
 
         for camera_index in range(0, num_camera):
             camera_line = nvm_file.readline()
-            self.cameras.append(self.parse_camera_line(camera_line))
+            self.cameras.append(self.parse_camera_line(camera_line, image_path))
 
         # parse number of points
         logging.info('[NVM Model Parsing] Parsing Points')
@@ -54,7 +56,7 @@ class NVMModel:
 
         logging.info('[NVM Model Parsing] Parsing Done')
 
-    def parse_camera_line(self, camera_line):
+    def parse_camera_line(self, camera_line, image_path):
         '''Parses camera line from NVM camera line'''
         # filename focal_length quaternion(wxyz) position(xyz)
         tokens = camera_line.split()
@@ -62,8 +64,12 @@ class NVMModel:
 
         # parse camera name
         name_token = filename.split('/')
+        image_file_name = name_token[-1]
         camera_name = name_token[-1].split('.')[0]
+        image_file_path = path.join(image_path, image_file_name)
 
+        with Image.open(image_file_path) as img:
+            width, height = img.size
 
         # parse camera position
         position_x = tokens[6]
@@ -74,6 +80,8 @@ class NVMModel:
             float(position_y),
             float(position_z)
         ])
+        print('[Original] Position array')
+        print(position_arr)
         position = Point()
         position.from_array(position_arr)
 
@@ -91,6 +99,8 @@ class NVMModel:
         ])
         rotation = Rotation()
         rotation.from_quaternion(rotation_quat)
+        print('[Original] Rotation Matrix')
+        print(rotation.to_matrix())
 
         # parse focal length
         focal_length = float(tokens[1])
@@ -99,10 +109,16 @@ class NVMModel:
         radial_distortion = float(tokens[9])
 
         # extra principal offset values
-        cx = 0
-        cy = 0
+        cx = width/2
+        cy = height/2
         camera = NVMCamera(camera_name,position,rotation,focal_length,
                            cx, cy, radial_distortion)
+        print('[Updated] Position array')
+        print(camera.get_position().to_array())
+        print('[Updated] Rotation matrix')
+        print(camera.get_rotation().to_matrix())
+        print('='*40)
+        print('')
         return camera
 
     def parse_point_line(self, point_line):

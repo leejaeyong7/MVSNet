@@ -17,14 +17,14 @@ class Rotation:
         z = quaternion[3]
         self.matrix[0, 0] = 1 - 2*y*y - 2*z*z
         self.matrix[0, 1] = 2*x*y - 2*z*w
-        self.matrix[0, 2] = 2*x*z - 2*y*w
+        self.matrix[0, 2] = 2*x*z + 2*y*w
 
-        self.matrix[1, 0] = 2*x*y - 2*z*w
+        self.matrix[1, 0] = 2*x*y + 2*z*w
         self.matrix[1, 1] = 1 - 2*x*x - 2*z*z
         self.matrix[1, 2] = 2*y*z - 2*x*w
 
         self.matrix[2, 0] = 2*x*z - 2*y*w
-        self.matrix[2, 1] = 2*y*z - 2*x*w
+        self.matrix[2, 1] = 2*y*z + 2*x*w
         self.matrix[2, 2] = 1 - 2*x*x - 2*y*y
         return self
 

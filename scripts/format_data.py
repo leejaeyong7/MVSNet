@@ -15,17 +15,19 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-INPUT_NVM_FILE = './test_data/test.nvm'
-INPUT_IMAGE_PATH = './test_data/test_images/'
-OUTPUT_MVS_PATH = './test_output/'
+DATASET_NAME='box'
 
-DEPTH_MIN = 450
-DEPTH_INT = 0.75
+DEPTH_MIN = 425
+DEPTH_INT = 2.5
 
-NUM_PAIR_LIMIT = 10
+INPUT_NVM_FILE = '/home/ubuntu/dataset/{}/reconstruction0.nvm'.format(DATASET_NAME)
+INPUT_IMAGE_PATH = '/home/ubuntu/dataset/{}/images/'.format(DATASET_NAME)
+OUTPUT_MVS_PATH = '/home/ubuntu/output/{}_{}_{}/'.format(DATASET_NAME, DEPTH_MIN, DEPTH_INT)
+
+NUM_PAIR_LIMIT = 5
 
 # parse NVM
-nvm_object = NVM().from_file(INPUT_NVM_FILE)
+nvm_object = NVM().from_file(INPUT_NVM_FILE, INPUT_IMAGE_PATH)
 
 # translate to MVS
 mvs_object = MVS(DEPTH_MIN, DEPTH_INT)

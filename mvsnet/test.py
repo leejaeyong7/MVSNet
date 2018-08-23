@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 
 # params for datasets
-tf.app.flags.DEFINE_string('dense_folder', None, 
+tf.app.flags.DEFINE_string('dense_folder', '/home/ubuntu/output/box_425_2.5/', 
                            """Root path to dense folder.""")
 # params for input
 tf.app.flags.DEFINE_integer('view_num', 5,
@@ -52,7 +52,7 @@ tf.app.flags.DEFINE_integer('batch_size', 1,
 
 # params for config
 tf.app.flags.DEFINE_string('pretrained_model_ckpt_path', 
-                           '/data/dtu/tf_model/mvsnet_arxiv/model.ckpt',
+                           '/home/ubuntu/model/model.ckpt',
                            """Path to restore the model.""")
 tf.app.flags.DEFINE_integer('ckpt_step', 70000,
                             """ckpt step.""")
@@ -114,6 +114,9 @@ class MVSGenerator:
                 # crop to fit network
                 croped_images, croped_cams = crop_mvs_input(scaled_input_images, scaled_input_cams)
                 image_shape = croped_images[0].shape
+                file_path = data[2 * view]
+                crop_file_path = file_path.replace('images','cropped')
+                cv2.imwrite(crop_file_path, croped_images[0])
 
                 # center images
                 centered_images = []

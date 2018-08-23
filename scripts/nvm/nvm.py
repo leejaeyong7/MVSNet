@@ -11,7 +11,7 @@ class NVM:
     def __init__(self):
         self.models = []
 
-    def from_file(self, file_path):
+    def from_file(self, file_path, image_path):
         '''Reads from NVM file to create multiple models'''
         with open(file_path, 'r') as nvm_file:
             # check NVM header
@@ -21,7 +21,7 @@ class NVM:
 
             # TODO: handle multi-model loading
             model = NVMModel()
-            model.from_file(nvm_file)
+            model.from_file(nvm_file, image_path)
             self.models.append(model)
         return self
 
