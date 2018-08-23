@@ -84,6 +84,9 @@ class MVSCamera(Camera):
     def from_file(file_path):
         image_name = file_path.split('/')[-1]
         image_prefix = image_name[0:8]
+        mvs_path = '/'.join(file_path.split('/')[0:-2])
+        image_path = path.join(mvs_path, 'images', image_prefix + '.jpg')
+
         pos = Point()
         rot = Rotation()
         fx = 0
@@ -92,7 +95,6 @@ class MVSCamera(Camera):
         cy = 0
         dm = 0
         di = 0
-        
 
         mvs_camera = MVSCamera(0, pos, rot, fx, fy, cx, cy, dm, di)
         with open(file_path, 'r') as f:

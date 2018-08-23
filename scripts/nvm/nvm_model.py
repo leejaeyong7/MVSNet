@@ -80,8 +80,6 @@ class NVMModel:
             float(position_y),
             float(position_z)
         ])
-        print('[Original] Position array')
-        print(position_arr)
         position = Point()
         position.from_array(position_arr)
 
@@ -99,8 +97,7 @@ class NVMModel:
         ])
         rotation = Rotation()
         rotation.from_quaternion(rotation_quat)
-        print('[Original] Rotation Matrix')
-        print(rotation.to_matrix())
+        rotation.from_matrix(np.transpose(rotation.to_matrix()))
 
         # parse focal length
         focal_length = float(tokens[1])

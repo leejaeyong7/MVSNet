@@ -15,14 +15,17 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-DATASET_NAME='box'
+DATASET_NAME='castle'
 
 DEPTH_MIN = 425
 DEPTH_INT = 2.5
 
-INPUT_NVM_FILE = '/home/ubuntu/dataset/{}/reconstruction0.nvm'.format(DATASET_NAME)
-INPUT_IMAGE_PATH = '/home/ubuntu/dataset/{}/images/'.format(DATASET_NAME)
-OUTPUT_MVS_PATH = '/home/ubuntu/output/{}_{}_{}/'.format(DATASET_NAME, DEPTH_MIN, DEPTH_INT)
+DATASET_DIR = '/Users/jae/Research/dataset'
+OUTPUT_DIR = '/Users/jae/Research/output/test'
+
+INPUT_NVM_FILE = '{}/{}/reconstruction0.nvm'.format(DATASET_DIR, DATASET_NAME)
+INPUT_IMAGE_PATH = '{}/{}/images/'.format(DATASET_DIR, DATASET_NAME)
+OUTPUT_MVS_PATH = '{}/{}_{}_{}/'.format(OUTPUT_DIR, DATASET_NAME, DEPTH_MIN, DEPTH_INT)
 
 NUM_PAIR_LIMIT = 5
 
