@@ -22,18 +22,23 @@ class Camera:
         C = -Rc t
         return C
         '''
-        rot_c = self.extrinsic[0:3, 0:3]
+        rot_c  = self.get_rotation().to_matrix()
         trans = self.extrinsic[0:3, 3]
         cc = -np.matmul(rot_c, trans)
         return Point().from_array(cc)
+        # return Point().from_array(trans)
 
     def get_rotation(self):
         return Rotation().from_matrix(np.transpose(self.extrinsic[0:3, 0:3]))
 
     def set_position(self, position):
-        ''' sets camera position from camera center '''
-        rot_c = self.extrinsic[0:3, 0:3]
-        rot = np.transpose(rot_c)
+        ''' sets camera position from camera center 
+        NOTE)
+        R = Rc ^T
+        t = -RC
+        return t
+        '''
+        rot  = self.extrinsic[0:3, 0:3]
         cc = position.to_array()
         trans = -np.matmul(rot, cc)
         self.extrinsic[0:3, 3] = trans
