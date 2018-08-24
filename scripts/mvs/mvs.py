@@ -24,7 +24,7 @@ class MVS:
     def from_nvm(self, nvm_object, image_path):
         camera_name_hash = {}
         logging.info('[TRANSLATE MVS] Translation start')
-        for i, camera in enumerate(nvm_object.cameras):
+        for camera in nvm_object.cameras:
             pos = camera.get_position()
             rot = camera.get_rotation()
             intrinsic = camera.get_intrinsic()
@@ -33,13 +33,15 @@ class MVS:
             cx = intrinsic[0,2]
             cy = intrinsic[1,2]
 
-            mvs_camera = MVSCamera(i, pos, rot, fx, fy, cx, cy,
+            # assign index later
+            mvs_camera = MVSCamera(0, pos, rot, fx, fy, cx, cy,
                                    self.depth_min, self.depth_interval)
             camera_name_hash[camera.name] = mvs_camera
-
             image_file_path = path.join(image_path, '{}.jpg'.format(camera.name))
             mvs_camera.set_image_file(image_file_path)
-
+        for i, nvm_camera_name in enumerate(sorted(camera_name_hash.iterkeys())):
+            mvs_camera = camera_name_hash[nvm_camera_name]
+            mvs_camera.index = i
             self.cameras.append(mvs_camera)
         num_cameras = len(self.cameras)
         logging.info('[TRANSLATE MVS] finished point cloud')
