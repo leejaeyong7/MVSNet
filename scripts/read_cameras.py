@@ -6,14 +6,15 @@ from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image
 import os
 
-file_dir = '../../output/test/castle_425_2.5/cams'
-nvm_file_dir = '../../dataset/castle/reconstruction0.nvm'
-nvm_image_dir = '../../dataset/castle/images'
+file_dir = '../../dataset/outputs/mvsnet/castle_425_2.5/depths_mvsnet'
+nvm_file_dir = '../../dataset/inputs/mvsnet/castle/reconstruction0.nvm'
+nvm_image_dir = '../../dataset/inputs/mvsnet/castle/images'
+
 file_list = os.listdir(file_dir)
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-def create_frus(arr, o, q1, q2, q3, q4, index):
+def create_frus(arr, o, q1, q2, q3, q4, q5, index):
     # o => 1 => 2 => o
     arr.append(o[index])
     arr.append(q1[index])
@@ -35,7 +36,11 @@ def create_frus(arr, o, q1, q2, q3, q4, index):
     arr.append(q1[index])
     arr.append(o[index])
 
-# reading from file list
+    arr.append(o[index])
+    arr.append(q5[index])
+    arr.append(o[index])
+
+# # reading from file list
 # for file_path in sorted(file_list):
 #     if(file_path == '.' or file_path == '..'  or file_path == '.DS_Store'):
 #         continue
@@ -63,6 +68,7 @@ def create_frus(arr, o, q1, q2, q3, q4, index):
 #     quat_2 = np.matmul(cam_rot, np.array([w,-h,f]))
 #     quat_3 = np.matmul(cam_rot, np.array([-w,-h,f]))
 #     quat_4 = np.matmul(cam_rot, np.array([-w,h,f]))
+#     quat_5 = np.matmul(cam_rot, np.array([0,h,0]))
 
 #     scale = 5
 
@@ -71,12 +77,13 @@ def create_frus(arr, o, q1, q2, q3, q4, index):
 #     cam_quat2  = np.add(cam_pos, quat_2*scale)
 #     cam_quat3  = np.add(cam_pos, quat_3*scale)
 #     cam_quat4  = np.add(cam_pos, quat_4*scale)
+#     cam_quat5  = np.add(cam_pos, quat_5*scale)
 
-#     create_frus(xs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, 0)
-#     create_frus(ys, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, 1)
-#     create_frus(zs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, 2)
-#     plt.axis('equal')
+#     create_frus(xs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 0)
+#     create_frus(ys, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 1)
+#     create_frus(zs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 2)
 #     ax.plot(xs, ys, zs=zs)
+# plt.axis('equal')
 # plt.show()
 
 
@@ -101,6 +108,7 @@ for camera in nvm_model.cameras:
     quat_2 = np.matmul(cam_rot, np.array([w,-h,f]))
     quat_3 = np.matmul(cam_rot, np.array([-w,-h,f]))
     quat_4 = np.matmul(cam_rot, np.array([-w,h,f]))
+    quat_5 = np.matmul(cam_rot, np.array([0,h,0]))
 
     scale = 5
 
@@ -109,10 +117,11 @@ for camera in nvm_model.cameras:
     cam_quat2  = np.add(cam_pos, quat_2*scale)
     cam_quat3  = np.add(cam_pos, quat_3*scale)
     cam_quat4  = np.add(cam_pos, quat_4*scale)
+    cam_quat5  = np.add(cam_pos, quat_5*scale)
 
-    create_frus(xs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, 0)
-    create_frus(ys, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, 1)
-    create_frus(zs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, 2)
+    create_frus(xs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 0)
+    create_frus(ys, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 1)
+    create_frus(zs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 2)
     plt.axis('equal')
     ax.plot(xs, ys, zs=zs)
 plt.show()

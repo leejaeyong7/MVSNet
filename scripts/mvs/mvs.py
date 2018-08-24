@@ -20,6 +20,7 @@ class MVS:
         self.depth_min  = depth_min
         self.depth_interval = depth_interval
 
+
     def from_nvm(self, nvm_object, image_path):
         camera_name_hash = {}
         logging.info('[TRANSLATE MVS] Translation start')

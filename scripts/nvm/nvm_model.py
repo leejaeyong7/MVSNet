@@ -110,12 +110,6 @@ class NVMModel:
         cy = height/2
         camera = NVMCamera(camera_name,position,rotation,focal_length,
                            cx, cy, radial_distortion)
-        print('[Updated] Position array')
-        print(camera.get_position().to_array())
-        print('[Updated] Rotation matrix')
-        print(camera.get_rotation().to_matrix())
-        print('='*40)
-        print('')
         return camera
 
     def parse_point_line(self, point_line):
