@@ -7,6 +7,7 @@ class Camera:
     def __init__(self, position, rotation, fx, fy, cx=0, cy=0, k1=0, k2=0, p1=0, p2=0, k3=0):
         '''
         extrinsic stores: [R | t]
+        position should be C, rotation should be R_c
         
         R = R_c ^t
         t = -R C
@@ -16,13 +17,13 @@ class Camera:
         self.intrinsic = np.eye(3, dtype=np.float)
         self.radial_distortion = np.array([1, 0, 0, 0])
         self.tangential_distortion = np.array([0, 0])
-        self.set_position(position)
         self.set_rotation(rotation)
+        self.set_position(position)
         self.set_intrinsic(fx, fy, cx, cy)
         self.set_distortion(k1, k2, p1, p2, k3)
 
     def get_position(self):
-        ''' returns camera center
+        ''' returns camera center in world coordinates
         NOTE)
         R = Rc ^T
         t = -RC
@@ -35,17 +36,16 @@ class Camera:
         return Point().from_array(cc)
 
     def get_rotation(self):
-        '''
-        From R, return R_c
+        ''' returns camera rotation matrix
+        i.e) From R, return R_c
         '''
         rot = self.extrinsic[0:3, 0:3]
         return Rotation().from_matrix(np.transpose(rot))
 
     def set_position(self, position):
-        '''
+        ''' sets caemra translation by camera center
         Given C, save t
         NOTE)
-        R = Rc ^T
         t = -RC
         '''
         rot  = self.extrinsic[0:3, 0:3]
@@ -57,14 +57,9 @@ class Camera:
         '''
         Given R_c, save R
         NOTE)
-        C = -R_c t == -R^t t
         R = Rc ^T
-
         '''
-        # on updating rotation, we need to update translation too
-        pos = self.get_position()
         self.extrinsic[0:3, 0:3] = np.transpose(rotation.to_matrix())
-        self.set_position(pos)
 
     def get_intrinsic(self):
         return self.intrinsic

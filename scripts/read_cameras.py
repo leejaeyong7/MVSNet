@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image
 import os
 
-file_dir = '../../dataset/outputs/mvsnet/dtu/depths_mvsnet'
+file_dir = '../../dataset/outputs/mvsnet/dtu/cams'
 nvm_file_dir = '../../dataset/inputs/mvsnet/dtu/reconstruction0.nvm'
 nvm_image_dir = '../../dataset/inputs/mvsnet/dtu/images'
 
@@ -44,6 +44,9 @@ def create_frus(arr, o, q1, q2, q3, q4, q5, index):
     arr.append(o[index])
 
 # reading from file list
+xs = []
+ys = []
+zs = []
 for file_path in sorted(file_list):
     if(file_path == '.' or file_path == '..'  or file_path == '.DS_Store'):
         continue
@@ -56,9 +59,9 @@ for file_path in sorted(file_list):
     camera = MVSCamera.from_file(full_file_path)
 
     fl = camera.get_focal_length()
-    xs = []
-    ys = []
-    zs = []
+    # xs = []
+    # ys = []
+    # zs = []
 
     cam_pos = camera.get_position().to_array()
     cam_rot = camera.get_rotation().to_matrix()
@@ -73,7 +76,7 @@ for file_path in sorted(file_list):
     quat_4 = np.matmul(cam_rot, np.array([-w,h,f]))
     quat_5 = np.matmul(cam_rot, np.array([0,h,0]))
 
-    scale = 55
+    scale = 5
 
     cam_look_at = np.add(cam_pos, look_at*scale)
     cam_quat1  = np.add(cam_pos, quat_1*scale)
@@ -82,10 +85,14 @@ for file_path in sorted(file_list):
     cam_quat4  = np.add(cam_pos, quat_4*scale)
     cam_quat5  = np.add(cam_pos, quat_5*scale)
 
-    create_frus(xs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 0)
-    create_frus(ys, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 1)
-    create_frus(zs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 2)
-    ax.plot(xs, ys, zs=zs)
+    # create_frus(xs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 0)
+    # create_frus(ys, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 1)
+    # create_frus(zs, cam_pos, cam_quat1, cam_quat2, cam_quat3, cam_quat4, cam_quat5, 2)
+    # ax.plot(xs, ys, zs=zs)
+    xs.append(cam_pos[0])
+    ys.append(cam_pos[1])
+    zs.append(cam_pos[2])
+ax.plot(xs, ys, zs=zs)
 plt.axis('equal')
 plt.show()
 

@@ -96,6 +96,8 @@ class NVMModel:
             float(rotation_z)
         ])
         rotation = Rotation()
+        # the rotation matrix of NVM is R, not R_c
+        # since NVMCaemra class expects R_c, we should transpose it
         rotation.from_quaternion(rotation_quat)
         rotation.from_matrix(np.transpose(rotation.to_matrix()))
 
