@@ -112,6 +112,14 @@ class NVMModel:
         cy = height/2
         camera = NVMCamera(camera_name,position,rotation,focal_length,
                            cx, cy, radial_distortion)
+        R = rotation.to_matrix()
+        print('Rotation is close')
+        print(np.allclose(R, camera.extrinsic[0:2, 0:2]))
+        trans = camera.extrinsic[0:2, 3]
+        camera_center = position.to_array()
+        cam_trans = -np.matmul(R, trans)
+        print('trans is close')
+        print(np.allclose(trans, cam_trans)))
         return camera
 
     def parse_point_line(self, point_line):
