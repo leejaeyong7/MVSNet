@@ -15,25 +15,26 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-DATASET_NAME='castle'
 
-DEPTH_MIN = 425
-DEPTH_INT = 2.5
+DEPTH_DIMENSION = 192
 
-DATASET_DIR = '/Users/jae/Research/dataset'
-OUTPUT_DIR = '/Users/jae/Research/output/test'
+# DATASET_DIR = '/Users/jae/Research/dataset'
+# OUTPUT_DIR = '/Users/jae/Research/output/test'
+DATASET_DIR = '/home/ubuntu/dataset'
+DATASET_NAME='gilbane'
+OUTPUT_DIR = '/home/ubuntu/output/'
 
 INPUT_NVM_FILE = '{}/{}/reconstruction0.nvm'.format(DATASET_DIR, DATASET_NAME)
 INPUT_IMAGE_PATH = '{}/{}/images/'.format(DATASET_DIR, DATASET_NAME)
-OUTPUT_MVS_PATH = '{}/{}_{}_{}/'.format(OUTPUT_DIR, DATASET_NAME, DEPTH_MIN, DEPTH_INT)
+OUTPUT_MVS_PATH = '{}/{}/'.format(OUTPUT_DIR, DATASET_NAME)
 
-NUM_PAIR_LIMIT = 5
+NUM_PAIR_LIMIT = 10
 
 # parse NVM
 nvm_object = NVM().from_file(INPUT_NVM_FILE, INPUT_IMAGE_PATH)
 
 # translate to MVS
-mvs_object = MVS(DEPTH_MIN, DEPTH_INT)
+mvs_object = MVS(DEPTH_DIMENSION)
 mvs_object.from_nvm(nvm_object.models[0], INPUT_IMAGE_PATH)
 
 # write output to MVS PATH

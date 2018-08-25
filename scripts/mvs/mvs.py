@@ -25,6 +25,30 @@ class MVS:
     def from_nvm(self, nvm_object, image_path):
         camera_name_hash = {}
         logging.info('[TRANSLATE MVS] Translation start')
+        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras begin')
+
+        min_dist = float('inf')
+        max_dist = -float('inf')
+        sum_dist = 0
+        total_points = 0
+        for nvm_point in nvm_object.points:
+            for measurement in nvm_point.measurements:
+                distance = measurement.camera.get_position().distance_to(nvm_point)
+                min_dist = min(min_dist, distance)
+                max_dist = max(max_dist, distance)
+                sum_dist += distance
+                total_points += 1
+        avg_dist = sum_dist / total_points
+        # assign depth min / interval based on avg / min / max / dimension
+
+        depth_min = avg_dist - (avg_dist - min_dist) * 1.3
+        depth_max = avg_dist + (max_dist - avg_dist) * 1.3
+        depth_int = (depth_max - depth_min) / self.depth_dimension
+        self.depth_min = max(0, depth_min)
+        self.depth_interval = depth_int
+        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras finished')
+        logging.info('[TRANSLATE MVS] Depth MIN: {} / Depth INT: {}'.format(self.depth_min, self.depth_interval))
+        logging.info('[TRANSLATE MVS] Translating cameras')
         for camera in nvm_object.cameras:
             pos = camera.get_position()
             rot = camera.get_rotation()
@@ -46,31 +70,10 @@ class MVS:
             self.cameras.append(mvs_camera)
         num_cameras = len(self.cameras)
         logging.info('[TRANSLATE MVS] finished point cloud')
-        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras begin')
-
-        min_dist = math.inf
-        max_dist = -math.inf
-        sum_dist = 0
-        total_points = 0
-        for nvm_point in nvm_object.points:
-            for measurement in nvm_point.measurements:
-                distance = measurement.camera.position.distance_to(nvm_point)
-                min_dist = math.min(min_dist, distance)
-                max_dist = math.max(max_dist, distance)
-                sum_dist += distance
-                total_points += 1
-        avg_dist = sum_dist / total_points
-        # assign depth min / interval based on avg / min / max / dimension
-
-        depth_min = avg_dist - (avg_dist - min_dist) * 1.3
-        depth_max = avg_dist + (max_dist - avg_dist) * 1.3
-        depth_int = (depth_max - depth_min) / self.depth_dimension
-        self.depth_min = math.max(0, depth_min)
-        self.depth_interval = depth_int
-        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras finished')
 
 
         # compute score map
+        logging.info('[TRANSLATE MVS] Score computation start')
         score_map = np.zeros((num_cameras, num_cameras))
         for i in range(0, num_cameras):
             nvm_camera1 = nvm_object.cameras[i]
@@ -92,7 +95,7 @@ class MVS:
                     score = self.get_score(theta_i_j)
                     score_map[mvs_camera1_index, mvs_camera2_index] += score
 
-        logging.info('[TRANSLATE MVS] finished score computation')
+        logging.info('[TRANSLATE MVS] Score computation finished')
         self.pair_score_map = score_map
 
     def get_score(self, theta_i_j, theta_0=5, sigma_1=1, sigma_2=10):
