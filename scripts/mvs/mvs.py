@@ -13,12 +13,13 @@ def mkdirp(dest):
             raise
 
 class MVS:
-    def __init__(self, depth_min, depth_interval):
+    def __init__(self, depth_dimension ):
         self.cameras = []
         self.images = []
         self.pair_score_map = None
-        self.depth_min  = depth_min
-        self.depth_interval = depth_interval
+        self.depth_min = 0
+        self.depth_interval = 0
+        self.depth_dimension = depth_dimension
 
 
     def from_nvm(self, nvm_object, image_path):
@@ -45,13 +46,35 @@ class MVS:
             self.cameras.append(mvs_camera)
         num_cameras = len(self.cameras)
         logging.info('[TRANSLATE MVS] finished point cloud')
+        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras begin')
+
+        min_dist = math.inf
+        max_dist = -math.inf
+        sum_dist = 0
+        total_points = 0
+        for nvm_point in nvm_object.points:
+            for measurement in nvm_point.measurements:
+                distance = measurement.camera.position.distance_to(nvm_point)
+                min_dist = math.min(min_dist, distance)
+                max_dist = math.max(max_dist, distance)
+                sum_dist += distance
+                total_points += 1
+        avg_dist = sum_dist / total_points
+        # assign depth min / interval based on avg / min / max / dimension
+
+        depth_min = avg_dist - (avg_dist - min_dist) * 1.3
+        depth_max = avg_dist + (max_dist - avg_dist) * 1.3
+        depth_int = (depth_max - depth_min) / self.depth_dimension
+        self.depth_min = math.max(0, depth_min)
+        self.depth_interval = depth_int
+        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras finished')
+
 
         # compute score map
         score_map = np.zeros((num_cameras, num_cameras))
         for i in range(0, num_cameras):
             nvm_camera1 = nvm_object.cameras[i]
             logging.info('[TRANSLATE MVS] On Camera {} / {}'.format(i+1, num_cameras))
-            logging.info('features: {}'.format(len(nvm_camera1.features.keys())))
             for feature_index, point in nvm_camera1.features.iteritems():
                 for camera_name, camera in point.cameras.iteritems():
                     if camera_name == nvm_camera1.name:

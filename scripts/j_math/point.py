@@ -11,3 +11,6 @@ class Point:
     def to_array(self):
         return self.position
     
+
+    def distance_to(self, point):
+        return np.linalg.norm(self.position, point.position)
