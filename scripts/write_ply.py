@@ -13,9 +13,9 @@ def mkdirp(dest):
     try: 
         os.makedirs(dest)
     except OSError:
-        if not path.isdir(dest):
+        if not os.path.isdir(dest):
             raise
-PROJECT='box'
+PROJECT='gilbane'
 MVS_OUTPUT_PATH = '/Users/jae/Research/dataset/outputs/mvsnet/{}/depths_mvsnet'.format(PROJECT)
 OUTPUT_FOLDER = '/Users/jae/Research/outputs/{}'.format(PROJECT)
 mkdirp(OUTPUT_FOLDER)
@@ -36,7 +36,7 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
     source_reproj_homo_pixel = source_proj_mat.dot(np.append(ref_point, [1]))
 
     source_pixel = source_reproj_homo_pixel / source_reproj_homo_pixel[2]
-    source_pixel_rounded = np.round(source_pixel[0:2])
+    source_pixel_rounded = source_pixel[0:2].astype(int)
 
     # check if pixel_rounded is inside source image
     if(source_pixel_rounded[0] < 0 or source_pixel_rounded[0] >= im_w or
@@ -45,8 +45,8 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
         return False
 
     # obtain depth value of projected pixel in source image
-    source_depth = source_depth_map[int(source_pixel_rounded[1]),
-                                    int(source_pixel_rounded[0])]
+    source_depth = source_depth_map[source_pixel_rounded[1],
+                                    source_pixel_rounded[0]]
     if(source_depth <= 0):
         return False
     # source_to_ref_homography = source_camera.homography_to(ref_camera, source_depth)
@@ -55,7 +55,7 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
 
     ref_reproj_homo_pixel = ref_proj_mat.dot(np.append(source_point, [1]))
     ref_reproj_pixel = ref_reproj_homo_pixel / ref_reproj_homo_pixel[2]
-    ref_reproj_pixel_rounded = np.round(ref_reproj_pixel[0:2])
+    ref_reproj_pixel_rounded = ref_reproj_pixel[0:2].astype(int)
 
     # check if reprojected point is inside image boundary
     if(ref_reproj_pixel_rounded[0] < 0 or ref_reproj_pixel_rounded[0] >= im_w or
@@ -64,8 +64,8 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
         # if not, return false
         return False
 
-    ref_reproj_depth = ref_depth_map[int(ref_reproj_pixel_rounded[1]),
-                                     int(ref_reproj_pixel_rounded[0])]
+    ref_reproj_depth = ref_depth_map[ref_reproj_pixel_rounded[1],
+                                     ref_reproj_pixel_rounded[0]]
 
     # obtain reprojected_pixel from w / h / ref_camera
     pixel_diff = np.sum(np.abs(ref_homo_pixel - ref_reproj_pixel))
