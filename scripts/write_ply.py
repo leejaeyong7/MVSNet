@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from mvs.mvs_camera import MVSCamera
 import re
@@ -15,9 +16,10 @@ def mkdirp(dest):
     except OSError:
         if not os.path.isdir(dest):
             raise
-PROJECT='gilbane'
+PROJECT='dtu'
 MVS_OUTPUT_PATH = '/Users/jae/Research/dataset/outputs/mvsnet/{}/depths_mvsnet'.format(PROJECT)
 OUTPUT_FOLDER = '/Users/jae/Research/outputs/{}'.format(PROJECT)
+
 mkdirp(OUTPUT_FOLDER)
 
 
@@ -25,6 +27,8 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
                   source_proj_mat, source_inv_proj_func,
                   ref_depth_map, source_depth_map, w, h):
     (im_h, im_w) = ref_depth_map.shape
+    time_start = time.time()
+
     # obtain source pixel from w / h / ref_depth_map
     ref_pixel = np.array([w, h])
     ref_depth = ref_depth_map[h, w]
@@ -63,7 +67,6 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
        source_depth <= 0):
         # if not, return false
         return False
-
     ref_reproj_depth = ref_depth_map[ref_reproj_pixel_rounded[1],
                                      ref_reproj_pixel_rounded[0]]
 
@@ -111,6 +114,7 @@ def post_process(cameras, depth_maps, prob_maps):
         for source_image_id in range(ref_image_id , N):
             if(ref_image_id == source_image_id):
                 continue
+
             ref_camera = cameras[ref_image_id]
             source_camera = cameras[source_image_id]
             ref_depth_map = photometric_verified[ref_image_id, :, :]
@@ -249,6 +253,7 @@ def main():
         depth_map = verified_depth_maps[image_id, :, :]
         plt.imsave('{}/{:08d}_depth.png'.format(OUTPUT_FOLDER, image_id), depth_map, cmap='rainbow')
     merge_depth_maps(cameras, image_files, verified_depth_maps)
+    merge_depth_maps(cameras, image_files, depth_maps)
         
 main()
 
