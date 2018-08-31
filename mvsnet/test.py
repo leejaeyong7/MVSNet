@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 
 # params for datasets
-tf.app.flags.DEFINE_string('dense_folder', '/home/ubuntu/output/box_425_2.5/', 
+tf.app.flags.DEFINE_string('dense_folder', None, 
                            """Root path to dense folder.""")
 # params for input
 tf.app.flags.DEFINE_integer('view_num', 5,
@@ -35,11 +35,11 @@ tf.app.flags.DEFINE_integer('default_depth_start', 1,
                             """Start depth when training.""")
 tf.app.flags.DEFINE_integer('default_depth_interval', 1, 
                             """Depth interval when training.""")
-tf.app.flags.DEFINE_integer('max_d', 192, 
+tf.app.flags.DEFINE_integer('max_d', 256, 
                             """Maximum depth step when training.""")
-tf.app.flags.DEFINE_integer('max_w', 1152, 
+tf.app.flags.DEFINE_integer('max_w', 4000, 
                             """Maximum image width when training.""")
-tf.app.flags.DEFINE_integer('max_h', 864, 
+tf.app.flags.DEFINE_integer('max_h', 2976, 
                             """Maximum image height when training.""")
 tf.app.flags.DEFINE_float('sample_scale', 0.25, 
                             """Downsample scale for building cost volume (W and H).""")
@@ -173,6 +173,7 @@ def mvsnet_pipeline(mvs_list):
     # GPU grows incrementally
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    config.gpu_options.per_process_gpu_memory_fraction = 2
 
     with tf.Session(config=config) as sess:   
 

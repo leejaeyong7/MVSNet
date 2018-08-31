@@ -17,8 +17,6 @@ class MVS:
         self.cameras = []
         self.images = []
         self.pair_score_map = None
-        self.depth_min = 0
-        self.depth_interval = 0
         self.depth_dimension = depth_dimension
 
 
@@ -27,28 +25,17 @@ class MVS:
         logging.info('[TRANSLATE MVS] Translation start')
         logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras begin')
 
-        min_dist = float('inf')
-        max_dist = -float('inf')
-        sum_dist = 0
-        total_points = 0
+        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras finished')
+        logging.info('[TRANSLATE MVS] Translating cameras')
+        distances = []
         for nvm_point in nvm_object.points:
             for measurement in nvm_point.measurements:
                 distance = measurement.camera.get_position().distance_to(nvm_point)
-                min_dist = min(min_dist, distance)
-                max_dist = max(max_dist, distance)
-                sum_dist += distance
-                total_points += 1
-        avg_dist = sum_dist / total_points
-        # assign depth min / interval based on avg / min / max / dimension
+                distances.append(distance)
+        avg_dist = np.sum(distances) / len(distances)
+        min_dist = np.min(distances)
+        max_dist = np.max(distances)
 
-        depth_min = avg_dist - (avg_dist - min_dist) * 1.3
-        depth_max = avg_dist + (max_dist - avg_dist) * 1.3
-        depth_int = (depth_max - depth_min) / self.depth_dimension
-        self.depth_min = max(0, depth_min)
-        self.depth_interval = depth_int
-        logging.info('[TRANSLATE MVS] Compute Min / Max / Average distance of cameras finished')
-        logging.info('[TRANSLATE MVS] Depth MIN: {} / Depth INT: {}'.format(self.depth_min, self.depth_interval))
-        logging.info('[TRANSLATE MVS] Translating cameras')
         for camera in nvm_object.cameras:
             pos = camera.get_position()
             rot = camera.get_rotation()
@@ -58,9 +45,22 @@ class MVS:
             cx = intrinsic[0,2]
             cy = intrinsic[1,2]
 
+
+            distances = []
+            for index, point in camera.features.iteritems():
+                distance = camera.get_position().distance_to(point)
+                distances.append(distance)
+            if(distances):
+                depth_min = np.percentile(distances, 2.5)
+                depth_max = np.percentile(distances, 97.5)
+            else:
+                depth_min = min_dist
+                depth_max = max_dist
+            depth_int = (depth_max - depth_min) / self.depth_dimension
+
             # assign index later
             mvs_camera = MVSCamera(0, pos, rot, fx, fy, cx, cy,
-                                   self.depth_min, self.depth_interval)
+                                   depth_min, depth_int)
             camera_name_hash[camera.name] = mvs_camera
             image_file_path = path.join(image_path, '{}.jpg'.format(camera.name))
             mvs_camera.set_image_file(image_file_path)

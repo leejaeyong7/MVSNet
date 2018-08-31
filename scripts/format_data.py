@@ -16,19 +16,19 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-DEPTH_DIMENSION = 192
+DEPTH_DIMENSION = 256
 
 # DATASET_DIR = '/Users/jae/Research/dataset'
 # OUTPUT_DIR = '/Users/jae/Research/output/test'
 DATASET_DIR = '/home/ubuntu/dataset'
-DATASET_NAME='gilbane'
+DATASET_NAME= 'dtu'
+NUM_PAIR_LIMIT = 10
 OUTPUT_DIR = '/home/ubuntu/output/'
 
 INPUT_NVM_FILE = '{}/{}/reconstruction0.nvm'.format(DATASET_DIR, DATASET_NAME)
 INPUT_IMAGE_PATH = '{}/{}/images/'.format(DATASET_DIR, DATASET_NAME)
 OUTPUT_MVS_PATH = '{}/{}/'.format(OUTPUT_DIR, DATASET_NAME)
 
-NUM_PAIR_LIMIT = 10
 
 # parse NVM
 nvm_object = NVM().from_file(INPUT_NVM_FILE, INPUT_IMAGE_PATH)
