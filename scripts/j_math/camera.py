@@ -76,3 +76,67 @@ class Camera:
 
     def get_focal_length(self):
         return (self.intrinsic[0, 0] + self.intrinsic[1, 1]) / 2
+
+    def homography_to(self, target, depth):
+        ''' returns homography from self to target camera 
+        i.e) pixel from self camera passing this homography matrix
+             will return target camera's pixel coordinate
+        '''
+        target_r = target.extrinsic[0:3, 0:3]
+        target_k = target.intrinsic
+        self_r_inv = np.transpose(self.extrinsic[0:3, 0:3])
+        self_k_inv = np.linalg.inv(self.intrinsic)
+        self_trans = self.extrinsic[0:3, 3]
+        target_trans = target.extrinsic[0:3, 3]
+        cam_rot = self.get_rotation().to_matrix()
+        look_at = -cam_rot.dot(np.array([0,0,1]))
+        principal_axis = np.transpose(look_at)
+
+        homography = np.eye(3) - ((self_trans - target_trans).dot(principal_axis)  / depth)
+
+        return target_k.dot(target_r).dot(homography).dot(self_r_inv).dot(self_k_inv)
+
+    def get_projection_matrix(self):
+        ''' returns 3x4 projection matrix 
+        '''
+        return self.intrinsic.dot(self.extrinsic[0:3, :])
+
+    def get_inverse_project_function(self):
+        ''' Inverse projection returns a line equation that gives world coordinate given distance
+        
+        returns scale (3x3 matrix) and a constant (3x1 array)
+        to get the world coordinate, one must:
+        pixel = [u, v, 1]
+        depth = z
+        (depth * scale * pixel) + pos
+
+        P = K^-1 * pixel
+        depth * [R | t]^-1 *P = X
+        '''
+        inv_proj_matrix = np.linalg.inv(self.intrinsic)
+
+        rot = self.get_rotation().to_matrix()
+        pos = self.get_position().to_array()
+        scale = np.matmul(rot, inv_proj_matrix)
+
+        return lambda p, depth: depth*scale.dot(p) + pos
+
+    def get_inverse_project_line_equation(self):
+        ''' Inverse projection returns a line equation that gives world coordinate given distance
+        
+        returns scale (3x3 matrix) and a constant (3x1 array)
+        to get the world coordinate, one must:
+        pixel = [u, v, 1]
+        depth = z
+        (depth * scale * pixel) + pos
+
+        P = K^-1 * pixel
+        depth * [R | t]^-1 *P = X
+        '''
+        inv_proj_matrix = np.linalg.inv(self.intrinsic)
+
+        rot = self.get_rotation().to_matrix()
+        pos = self.get_position().to_array()
+        scale = np.matmul(rot, inv_proj_matrix)
+
+        return  scale, pos
