@@ -72,15 +72,12 @@ class MVSGenerator:
                 # read input data
                 images = []
                 cams = []
-                image_index = int(os.path.splitext(os.path.basename(data[0]))[0])
                 selected_view_num = int(len(data) / 2)
 
                 for view in range(min(self.view_num, selected_view_num)):
-                    # image = cv2.imread(data[2 * view])
                     image_file = file_io.FileIO(data[2 * view], mode='r')
                     image = scipy.misc.imread(image_file, mode='RGB')
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    # cam = load_cam(open(data[2 * view + 1]))
                     cam_file = file_io.FileIO(data[2 * view + 1], mode='r')
                     cam = load_cam(cam_file)
                     cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
@@ -89,48 +86,27 @@ class MVSGenerator:
 
                 if selected_view_num < self.view_num:
                     for view in range(selected_view_num, self.view_num):
-                        # image = cv2.imread(data[0])
                         image_file = file_io.FileIO(data[0], mode='r')
                         image = scipy.misc.imread(image_file, mode='RGB')
                         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        # cam = load_cam(open(data[1]))
                         cam_file = file_io.FileIO(data[1], mode='r')
                         cam = load_cam(cam_file)
                         cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
                         images.append(image)
                         cams.append(cam)
 
-                # determine a proper scale to resize input 
-                h_scale = float(FLAGS.max_h) / images[0].shape[0]
-                w_scale = float(FLAGS.max_w) / images[0].shape[1]
-                if h_scale > 1 or w_scale > 1:
-                    print ("max_h, max_w should < W and H!")
-                    exit()
-                resize_scale = h_scale
-                if w_scale > h_scale:
-                    resize_scale = w_scale
-                scaled_input_images, scaled_input_cams = scale_mvs_input(images, cams, scale=resize_scale)
+                # determine a proper range to stride inputs
+                (h, w) = images[0].shape
 
-                # crop to fit network
-                croped_images, croped_cams = crop_mvs_input(scaled_input_images, scaled_input_cams)
-                image_shape = croped_images[0].shape
-                file_path = data[2 * view]
-                crop_file_path = file_path.replace('images','cropped')
-                cv2.imwrite(crop_file_path, croped_images[0])
+                stride_groups = stride_mvs_input(images, cams,
+                                                 w, h,
+                                                 FLAGS.max_w, FLAGS.max_h)
 
-                # center images
-                centered_images = []
-                for view in range(self.view_num):
-                    centered_images.append(center_image(croped_images[view]))
-
-                # sample cameras for building cost volume
-                scaled_cams = scale_mvs_camera(croped_cams, scale=FLAGS.sample_scale)
-
-                # return mvs input
-                croped_images = np.stack(croped_images, axis=0)
-                scaled_cams = np.stack(scaled_cams, axis=0)
-                self.counter += 1
-                yield (croped_images, centered_images, scaled_cams, image_index) 
+                for stride_group in stride_groups:
+                    yield (stride_group['images'],
+                           stride_group['cameras'],
+                           self.counter) 
+                    self.counter += 1
 
 def mvsnet_pipeline(mvs_list):
     """ mvsnet in altizure pipeline """
@@ -150,8 +126,7 @@ def mvsnet_pipeline(mvs_list):
     # iterators
     mvs_iterator = mvs_set.make_initializable_iterator()
     # data
-    croped_images, centered_images, scaled_cams, image_index = mvs_iterator.get_next()
-    croped_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
+    centered_images, scaled_cams, image_index = mvs_iterator.get_next()
     centered_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
     scaled_cams.set_shape(tf.TensorShape([None, FLAGS.view_num, 2, 4, 4]))
     depth_start = tf.reshape(
@@ -198,7 +173,7 @@ def mvsnet_pipeline(mvs_list):
             start_time = time.time()
             try:
                 out_depth_map, out_init_depth_map, out_prob_map, out_images, out_cams, out_index = sess.run(
-                    [depth_map, init_depth_map, prob_map, croped_images, scaled_cams, image_index])
+                    [depth_map, init_depth_map, prob_map, scaled_cams, image_index])
             except tf.errors.OutOfRangeError:
                 print("all dense finished")  # ==> "End of dataset"
                 break

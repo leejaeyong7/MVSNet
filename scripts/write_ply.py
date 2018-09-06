@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import tensorflow as tf
 from mvs.mvs_camera import MVSCamera
 import re
 import cv2
@@ -16,7 +17,7 @@ def mkdirp(dest):
     except OSError:
         if not os.path.isdir(dest):
             raise
-PROJECT='dtu'
+PROJECT='nbmtech'
 MVS_OUTPUT_PATH = '/Users/jae/Research/dataset/outputs/mvsnet/{}/depths_mvsnet'.format(PROJECT)
 OUTPUT_FOLDER = '/Users/jae/Research/outputs/{}'.format(PROJECT)
 
@@ -27,6 +28,8 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
                   source_proj_mat, source_inv_proj_func,
                   ref_depth_map, source_depth_map, w, h):
     (im_h, im_w) = ref_depth_map.shape
+    i = 1
+    return
     time_start = time.time()
 
     # obtain source pixel from w / h / ref_depth_map
@@ -109,28 +112,94 @@ def post_process(cameras, depth_maps, prob_maps):
 
     logging.info('[POST PROCESS] verfiying geometric verification...')
     # for each image's W / H, compare other image
-    for ref_image_id in range(0, N):
-        logging.info('[POST PROCESS] verifying geometric verification ({}/{})'.format(ref_image_id+1, N))
-        for source_image_id in range(ref_image_id , N):
-            if(ref_image_id == source_image_id):
-                continue
+    # 1. for all depth map images, get world coordinate values
+    all_world_points = np.zeros((4, N*W*H))
+    logging.info('[POST PROCESS] loading per camera points')
+    for i, camera in enumerate(cameras):
+        # 4x4 inv homo proj
+        inv_proj = camera.get_inverse_homogeneous_projection()
+        i_xs, i_ys = np.meshgrid(range(W), range(H))
 
-            ref_camera = cameras[ref_image_id]
-            source_camera = cameras[source_image_id]
-            ref_depth_map = photometric_verified[ref_image_id, :, :]
-            source_depth_map = photometric_verified[source_image_id, :, :]
-            ref_projection_mat = ref_camera.get_projection_matrix()
-            source_projection_mat = source_camera.get_projection_matrix()
-            ref_inv_projection_func= ref_camera.get_inverse_project_function()
-            source_inv_projection_func= source_camera.get_inverse_project_function()
-            for width in range(0, W):
-                for height in range(0, H):
-                    if(verify_images(ref_projection_mat, ref_inv_projection_func,
-                                     source_projection_mat, source_inv_projection_func,
-                                     ref_depth_map, source_depth_map,
-                                     width, height)):
-                        verified[ref_image_id, height, width] += 1
-                        verified[source_image_id, height, width] += 1
+        # (0,0), (1,0) ... (W-1, 0), (0,1) ... (W-1,H-1)
+        image_coords = np.array([i_xs.flatten(), i_ys.flatten()]).T 
+        ones = np.ones((W*H, 1))
+        depth_map = depth_maps[i, :, :]
+        inv_depths = np.reshape(1 / depth_map, (W*H, 1))
+        h_image_coords = np.hstack((image_coords, ones, inv_depths))
+        world_points = inv_proj.dot(h_image_coords.T)
+        all_world_points[:, i*W*H:(i+1)*W*H] = world_points
+
+    # project 3d points back into camera
+    for i in range(0, N-1):
+        depth_map = depth_maps[i, :, :]
+        depths = depth_map.flatten()
+        logging.info('[POST PROCESS] matching camera pairs {}/{}'.format(i+1, len(cameras)))
+        for j in range(i+1, N):
+            #start = time.time()
+            ref_camera = cameras[i]
+            source_camera = cameras[j]
+            ref_proj = ref_camera.get_projection_matrix()
+            source_proj = source_camera.get_projection_matrix()
+            ref_points = all_world_points[:, i*W*H:(i+1)*W*H]
+            source_points = all_world_points[:, j*W*H:(j+1)*W*H]
+
+            ref_reproj_homo = ref_proj.dot(source_points)
+            ref_reproj = ref_reproj_homo / ref_reproj_homo[2,:]
+
+            source_reproj_homo = source_proj.dot(ref_points)
+            source_reproj = source_reproj_homo / source_reproj_homo[2,:]
+            source_coords = np.round(source_reproj).astype(int)
+            source_indices = source_coords[0,:] + source_coords[1,:]*W
+            source_valids_w = np.logical_and(source_coords[0,:] >= 0, source_coords[0,:] < W)
+            source_valids_h = np.logical_and(source_coords[1,:] >= 0, source_coords[1,:] < H)
+            source_valids = np.logical_and(source_valids_w, source_valids_h)
+
+            # go through each W / H in ref, 
+            all_ref_indices = np.array(range(W*H))
+
+            # ref / source indices that has valid source reprojection
+            source_valid_ref_indices = all_ref_indices[source_valids] 
+            source_valid_source_indices = source_indices[source_valids]
+
+            # values valid from source projection
+            # this value contains pixel values of points in reference camera, in order of all_source_valid_ref_indices
+            source_valid_ref_reproj = ref_reproj[:, source_valid_source_indices]
+            source_valid_ref_reproj_coords = np.round(source_valid_ref_reproj).astype(int)
+            source_valid_ref_reproj_indices = source_valid_ref_reproj_coords[0,:] + source_valid_ref_reproj_coords[1,:]*W
+            source_valid_ref_valids_w = np.logical_and(source_valid_ref_reproj_coords[0,:] >= 0, source_valid_ref_reproj_coords[0,:] < W)
+            source_valid_ref_valids_h = np.logical_and(source_valid_ref_reproj_coords[1,:] >= 0, source_valid_ref_reproj_coords[1,:] < H)
+            source_valid_ref_valids = np.logical_and(source_valid_ref_valids_w, source_valid_ref_valids_h)
+
+            # values that are both valid in reprojection of source projected points
+            source_ref_valid_ref_reproj_indices = source_valid_ref_reproj_indices[source_valid_ref_valids]
+            source_ref_valid_ref_indices = source_valid_ref_indices[source_valid_ref_valids]
+            source_ref_valid_ref_depths = depths[source_ref_valid_ref_reproj_indices]
+            source_ref_valid_source_indices = source_valid_source_indices[source_valid_ref_valids]
+
+            original_depths = depths[source_ref_valid_ref_indices]
+            depth_diffs = np.abs(original_depths - source_ref_valid_ref_depths) / original_depths
+
+            original_pixel_x, original_pixel_y = np.divmod(source_ref_valid_ref_indices, W)
+            reproj_pixels = ref_reproj[:, source_ref_valid_source_indices]
+
+            pixel_diffs = np.abs((original_pixel_x - reproj_pixels[0,:]) + (original_pixel_y - reproj_pixels[1,:]))
+
+            pixel_is_valid = pixel_diffs < 1
+            depth_is_valid = depth_diffs < 0.01
+
+            is_valid = np.logical_and(pixel_is_valid, depth_is_valid)
+
+            valid_ref_indices = source_ref_valid_ref_indices[is_valid]
+            valid_source_indices = source_ref_valid_source_indices[is_valid]
+
+            verified_i = np.zeros((W*H, 1), dtype=int)
+            verified_i[valid_ref_indices] = 1
+            verified_j = np.zeros((W*H, 1), dtype=int)
+            verified_j[valid_source_indices] = 1
+            verified[i, :, :] += np.reshape(verified_i, (H, W))
+            verified[j, :, :] += np.reshape(verified_j, (H, W))
+            #end = time.time()
+            #print(end - start)
 
     verified_depth_map = np.where(verified >= 3, photometric_verified, 0)
     logging.info('[POST PROCESS] geometric verification verified!')
@@ -205,6 +274,7 @@ def merge_depth_maps(cameras, image_files, depth_maps):
     ''' merges image + depth into sindle PLY file '''
     global_point_cloud = []
     for image_id, image_file in enumerate(image_files):
+        logging.info('image_id {} / {}'.format(image_id, len(image_files)))
         image = cv2.imread(image_file)
         image = cv2.resize(image, (0,0), fx=0.25, fy=0.25) 
         (H, W, dim) = image.shape
@@ -253,7 +323,6 @@ def main():
         depth_map = verified_depth_maps[image_id, :, :]
         plt.imsave('{}/{:08d}_depth.png'.format(OUTPUT_FOLDER, image_id), depth_map, cmap='rainbow')
     merge_depth_maps(cameras, image_files, verified_depth_maps)
-    merge_depth_maps(cameras, image_files, depth_maps)
         
 main()
 

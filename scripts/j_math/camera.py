@@ -140,3 +140,17 @@ class Camera:
         scale = np.matmul(rot, inv_proj_matrix)
 
         return  scale, pos
+
+    def get_inverse_homogeneous_projection(self):
+        inv_proj_matrix = np.linalg.inv(self.intrinsic)
+        inv_4x4_proj_matrix = np.eye(4)
+        inv_4x4_proj_matrix[0:3, 0:3] = inv_proj_matrix
+        inv_camera_matrix = np.linalg.inv(self.extrinsic)
+        return inv_camera_matrix.dot(inv_4x4_proj_matrix)
+        
+    def get_homogeneous_projection(self):
+        proj_matrix = np.linalg.inv(self.intrinsic)
+        _4x4_proj_matrix = np.eye(4)
+        _4x4_proj_matrix[0:3, 0:3] = proj_matrix
+        return _4x4_proj_matrix.dot(self.extrinsic)
+        
