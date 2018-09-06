@@ -50,7 +50,7 @@ def stride_camera(cam, new_x, new_y):
 
 def stride_image(image, new_x, new_y, new_w, new_h):
     """ return stride of image using cv2 """
-    return image[new_y:new_y + new_h, new_x: new_x:new_w]
+    return image[new_y:new_y + new_h, new_x: new_x+new_w]
 
 def scale_mvs_camera(cams, scale=1):
     """ resize input in order to produce sampled depth map """
@@ -77,14 +77,15 @@ def scale_mvs_input(images, cams, depth_image=None, scale=1):
         depth_image = scale_image(depth_image, scale=scale, interpolation='nearest')
         return images, cams, depth_image
 
-def _get_strides(start=0, end, width):
+def _get_strides(start, end, width):
     if(end - start < width):
         raise "Invalid width"
     strides = range(start, end-width, width)
     if((end - start) % width is 0):
         strides.append(end - width)
     return strides
-def stride_mvs_input(images, cam, img_width, img_height, max_width, max_height):
+
+def stride_mvs_input(images, cams, img_width, img_height, max_width, max_height):
     stride_groups = []
     st_w = max_width
     st_h = max_height
@@ -92,8 +93,8 @@ def stride_mvs_input(images, cam, img_width, img_height, max_width, max_height):
     stride_xs = _get_strides(0, img_width, max_width)
     stride_ys = _get_strides(0, img_height, max_height)
 
-    for stride_x in stride_xs:
-        for stride_y in stride_ys:
+    for st_x in stride_xs:
+        for st_y in stride_ys:
             stride_group = {
                 'images': [],
                 'cameras': []
@@ -102,12 +103,12 @@ def stride_mvs_input(images, cam, img_width, img_height, max_width, max_height):
                 image = images[view]
                 camera = cams[view]
 
-                stride_image = stride_image(image, st_x, st_y, st_w, st_h)
-                stride_camera = stride_camera(camera, st_x, st_y)
+                strided_image = stride_image(image, st_x, st_y, st_w, st_h)
+                strided_camera = stride_camera(camera, st_x, st_y)
 
-                stride_group['images'] = stride_image
-                stride_group['cameras'] = stride_camera
-                stride_groups += stride_group
+                stride_group['images'].append(strided_image)
+                stride_group['cameras'].append(strided_camera)
+            stride_groups.append(stride_group)
 
     return stride_groups
 

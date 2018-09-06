@@ -35,11 +35,11 @@ tf.app.flags.DEFINE_integer('default_depth_start', 1,
                             """Start depth when training.""")
 tf.app.flags.DEFINE_integer('default_depth_interval', 1, 
                             """Depth interval when training.""")
-tf.app.flags.DEFINE_integer('max_d', 256, 
+tf.app.flags.DEFINE_integer('max_d', 192, 
                             """Maximum depth step when training.""")
-tf.app.flags.DEFINE_integer('max_w', 4000, 
+tf.app.flags.DEFINE_integer('max_w', 1152, 
                             """Maximum image width when training.""")
-tf.app.flags.DEFINE_integer('max_h', 2976, 
+tf.app.flags.DEFINE_integer('max_h', 864, 
                             """Maximum image height when training.""")
 tf.app.flags.DEFINE_float('sample_scale', 0.25, 
                             """Downsample scale for building cost volume (W and H).""")
@@ -66,47 +66,47 @@ class MVSGenerator:
         self.counter = 0
     
     def __iter__(self):
-        while True:
-            for data in self.sample_list: 
-                
-                # read input data
-                images = []
-                cams = []
-                selected_view_num = int(len(data) / 2)
+        for data in self.sample_list: 
+            # read input data
+            images = []
+            cams = []
+            selected_view_num = int(len(data) / 2)
 
-                for view in range(min(self.view_num, selected_view_num)):
-                    image_file = file_io.FileIO(data[2 * view], mode='r')
+            for view in range(min(self.view_num, selected_view_num)):
+                image_file = file_io.FileIO(data[2 * view], mode='r')
+                image = scipy.misc.imread(image_file, mode='RGB')
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                cam_file = file_io.FileIO(data[2 * view + 1], mode='r')
+                cam = load_cam(cam_file)
+                cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
+                images.append(image)
+                cams.append(cam)
+
+            if selected_view_num < self.view_num:
+                for view in range(selected_view_num, self.view_num):
+                    image_file = file_io.FileIO(data[0], mode='r')
                     image = scipy.misc.imread(image_file, mode='RGB')
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    cam_file = file_io.FileIO(data[2 * view + 1], mode='r')
+                    cam_file = file_io.FileIO(data[1], mode='r')
                     cam = load_cam(cam_file)
                     cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
                     images.append(image)
                     cams.append(cam)
 
-                if selected_view_num < self.view_num:
-                    for view in range(selected_view_num, self.view_num):
-                        image_file = file_io.FileIO(data[0], mode='r')
-                        image = scipy.misc.imread(image_file, mode='RGB')
-                        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        cam_file = file_io.FileIO(data[1], mode='r')
-                        cam = load_cam(cam_file)
-                        cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
-                        images.append(image)
-                        cams.append(cam)
+            # determine a proper range to stride inputs
+            h = images[0].shape[0]
+            w = images[0].shape[1]
 
-                # determine a proper range to stride inputs
-                (h, w) = images[0].shape
+            stride_groups = stride_mvs_input(images, cams,
+                                                w, h,
+                                                FLAGS.max_w, FLAGS.max_h)
 
-                stride_groups = stride_mvs_input(images, cams,
-                                                 w, h,
-                                                 FLAGS.max_w, FLAGS.max_h)
-
-                for stride_group in stride_groups:
-                    yield (stride_group['images'],
-                           stride_group['cameras'],
-                           self.counter) 
-                    self.counter += 1
+            print(len(stride_groups))
+            for stride_group in stride_groups:
+                stride_images = np.stack(stride_group['images'], axis=0)
+                stride_cameras = np.stack(stride_group['cameras'], axis=0)
+                yield (stride_images, stride_cameras, self.counter)
+                self.counter += 1
 
 def mvsnet_pipeline(mvs_list):
     """ mvsnet in altizure pipeline """
@@ -119,27 +119,26 @@ def mvsnet_pipeline(mvs_list):
 
     # Training and validation generators
     mvs_generator = iter(MVSGenerator(mvs_list, FLAGS.view_num))
-    generator_data_type = (tf.float32, tf.float32, tf.float32, tf.int32)    
+    generator_data_type = (tf.float32, tf.float32, tf.int32)    
     # Datasets from generators
     mvs_set = tf.data.Dataset.from_generator(lambda: mvs_generator, generator_data_type)
     mvs_set = mvs_set.batch(FLAGS.batch_size)
     # iterators
     mvs_iterator = mvs_set.make_initializable_iterator()
     # data
-    centered_images, scaled_cams, image_index = mvs_iterator.get_next()
-    centered_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
-    scaled_cams.set_shape(tf.TensorShape([None, FLAGS.view_num, 2, 4, 4]))
+    input_images, input_cams, image_index = mvs_iterator.get_next()
+    input_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
+    input_cams.set_shape(tf.TensorShape([None, FLAGS.view_num, 2, 4, 4]))
     depth_start = tf.reshape(
-        tf.slice(scaled_cams, [0, 0, 1, 3, 0], [FLAGS.batch_size, 1, 1, 1, 1]), [FLAGS.batch_size])
+        tf.slice(input_cams, [0, 0, 1, 3, 0], [FLAGS.batch_size, 1, 1, 1, 1]), [FLAGS.batch_size])
     depth_interval = tf.reshape(
-        tf.slice(scaled_cams, [0, 0, 1, 3, 1], [FLAGS.batch_size, 1, 1, 1, 1]), [FLAGS.batch_size])
+        tf.slice(input_cams, [0, 0, 1, 3, 1], [FLAGS.batch_size, 1, 1, 1, 1]), [FLAGS.batch_size])
 
     # depth map inference
-    init_depth_map, prob_map = inference_mem(
-        centered_images, scaled_cams, FLAGS.max_d, depth_start, depth_interval)
+    init_depth_map, prob_map = inference_mem(input_images, input_cams, FLAGS.max_d, depth_start, depth_interval)
 
     # refinement 
-    ref_image = tf.squeeze(tf.slice(centered_images, [0, 0, 0, 0, 0], [-1, 1, -1, -1, 3]), axis=1)
+    ref_image = tf.squeeze(tf.slice(input_images, [0, 0, 0, 0, 0], [-1, 1, -1, -1, 3]), axis=1)
     depth_map = depth_refine(init_depth_map, ref_image, FLAGS.max_d, depth_start, depth_interval)
                                             
     # init option
@@ -148,7 +147,7 @@ def mvsnet_pipeline(mvs_list):
     # GPU grows incrementally
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    config.gpu_options.per_process_gpu_memory_fraction = 2
+    #config.gpu_options.per_process_gpu_memory_fraction = 1
 
     with tf.Session(config=config) as sess:   
 
@@ -168,12 +167,13 @@ def mvsnet_pipeline(mvs_list):
     
         # run inference for each reference view
         sess.run(mvs_iterator.initializer)
-        for step in range(len(mvs_list)):
+        step = 0
+        while True:
 
             start_time = time.time()
             try:
                 out_depth_map, out_init_depth_map, out_prob_map, out_images, out_cams, out_index = sess.run(
-                    [depth_map, init_depth_map, prob_map, scaled_cams, image_index])
+                    [depth_map, init_depth_map, prob_map, input_images, input_cams, image_index])
             except tf.errors.OutOfRangeError:
                 print("all dense finished")  # ==> "End of dataset"
                 break
@@ -207,6 +207,7 @@ def mvsnet_pipeline(mvs_list):
             scipy.misc.imsave(image_file, out_ref_image)
             write_cam(out_ref_cam_path, out_ref_cam)
             total_step += 1
+            step += 1
 
 
 def main(argv=None):  # pylint: disable=unused-argument
