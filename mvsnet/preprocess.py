@@ -40,7 +40,7 @@ def scale_camera(cam, scale=1):
     new_cam[1][1][2] = cam[1][1][2] * scale
     return new_cam
 
-def stride_camera(cam, new_x, new_y):
+def stride_camera(cam, new_x, new_y, new_w, new_h):
     """ resize input in order to produce sampled depth map """
     new_cam = np.copy(cam)
     # principle point:
@@ -81,7 +81,7 @@ def _get_strides(start, end, width):
     if(end - start < width):
         raise "Invalid width"
     strides = range(start, end-width, width)
-    if((end - start) % width is 0):
+    if((end - start) is not width):
         strides.append(end - width)
     return strides
 
@@ -104,7 +104,7 @@ def stride_mvs_input(images, cams, img_width, img_height, max_width, max_height)
                 camera = cams[view]
 
                 strided_image = stride_image(image, st_x, st_y, st_w, st_h)
-                strided_camera = stride_camera(camera, st_x, st_y)
+                strided_camera = stride_camera(camera, st_x, st_y, st_w, st_h)
 
                 stride_group['images'].append(strided_image)
                 stride_group['cameras'].append(strided_camera)

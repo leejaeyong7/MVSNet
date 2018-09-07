@@ -18,8 +18,11 @@ def mkdirp(dest):
         if not os.path.isdir(dest):
             raise
 PROJECT='nbmtech'
-MVS_OUTPUT_PATH = '/Users/jae/Research/dataset/outputs/mvsnet/{}/depths_mvsnet'.format(PROJECT)
-OUTPUT_FOLDER = '/Users/jae/Research/outputs/{}'.format(PROJECT)
+# MVS_OUTPUT_PATH = '/Users/jae/Research/dataset/outputs/mvsnet/{}/depths_mvsnet'.format(PROJECT)
+# OUTPUT_FOLDER = '/Users/jae/Research/outputs/{}'.format(PROJECT)
+
+MVS_OUTPUT_PATH = '/home/ubuntu/output/{}/depths_mvsnet'.format(PROJECT)
+OUTPUT_FOLDER = '/home/ubuntu/pointcloud/{}'.format(PROJECT)
 
 mkdirp(OUTPUT_FOLDER)
 
@@ -28,8 +31,6 @@ def verify_images(ref_proj_mat, ref_inv_proj_func,
                   source_proj_mat, source_inv_proj_func,
                   ref_depth_map, source_depth_map, w, h):
     (im_h, im_w) = ref_depth_map.shape
-    i = 1
-    return
     time_start = time.time()
 
     # obtain source pixel from w / h / ref_depth_map
@@ -103,6 +104,7 @@ def post_process(cameras, depth_maps, prob_maps):
     # perform photometric verification
     logging.info('[POST PROCESS] verifying photometric verification...')
     photometric_verified = np.where(prob_maps < 0.8, 0, depth_maps)
+    # return photometric_verified
     logging.info('[POST PROCESS] photometric verification verified!')
 
     # perform geoemtric verification
@@ -323,7 +325,18 @@ def main():
         depth_map = verified_depth_maps[image_id, :, :]
         plt.imsave('{}/{:08d}_depth.png'.format(OUTPUT_FOLDER, image_id), depth_map, cmap='rainbow')
     merge_depth_maps(cameras, image_files, verified_depth_maps)
+    '''
+    cameras = cameras[0:500]
+    depth_maps = depth_maps[0:500,:,:]
+    prob_maps = prob_maps[0:500,:,:]
+    image_files = image_files[0:500]
         
+    verified_depth_maps = post_process(cameras, depth_maps, prob_maps)
+    for image_id, image_file in enumerate(image_files):
+        depth_map = verified_depth_maps[image_id, :, :]
+        plt.imsave('{}/{:08d}_depth.png'.format(OUTPUT_FOLDER, image_id), depth_map, cmap='rainbow')
+    merge_depth_maps(cameras, image_files, verified_depth_maps)
+    '''
 main()
 
 # depth_color = cv2.applyColorMap(depth_map, cv2.COLORMAP_HOT)

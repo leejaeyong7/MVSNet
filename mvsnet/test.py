@@ -101,11 +101,14 @@ class MVSGenerator:
                                                 w, h,
                                                 FLAGS.max_w, FLAGS.max_h)
 
-            print(len(stride_groups))
             for stride_group in stride_groups:
-                stride_images = np.stack(stride_group['images'], axis=0)
-                stride_cameras = np.stack(stride_group['cameras'], axis=0)
-                yield (stride_images, stride_cameras, self.counter)
+                stride_images = stride_group['images']
+                scaled_images = [scale_image(np.copy(img), scale=FLAGS.sample_scale) for img in stride_images]
+                scaled_cameras = scale_mvs_camera(stride_group['cameras'], scale=FLAGS.sample_scale)
+                stride_np_images = np.stack(stride_images, axis=0)
+                scaled_np_images = np.stack(scaled_images, axis=0)
+                scaled_np_cameras = np.stack(scaled_cameras, axis=0)
+                yield (stride_np_images, stride_np_images, scaled_np_cameras, self.counter)
                 self.counter += 1
 
 def mvsnet_pipeline(mvs_list):
@@ -119,14 +122,15 @@ def mvsnet_pipeline(mvs_list):
 
     # Training and validation generators
     mvs_generator = iter(MVSGenerator(mvs_list, FLAGS.view_num))
-    generator_data_type = (tf.float32, tf.float32, tf.int32)    
+    generator_data_type = (tf.float32, tf.float32, tf.float32, tf.int32)    
     # Datasets from generators
     mvs_set = tf.data.Dataset.from_generator(lambda: mvs_generator, generator_data_type)
     mvs_set = mvs_set.batch(FLAGS.batch_size)
     # iterators
     mvs_iterator = mvs_set.make_initializable_iterator()
     # data
-    input_images, input_cams, image_index = mvs_iterator.get_next()
+    stride_images, input_images, input_cams, image_index = mvs_iterator.get_next()
+    stride_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
     input_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
     input_cams.set_shape(tf.TensorShape([None, FLAGS.view_num, 2, 4, 4]))
     depth_start = tf.reshape(
@@ -135,10 +139,10 @@ def mvsnet_pipeline(mvs_list):
         tf.slice(input_cams, [0, 0, 1, 3, 1], [FLAGS.batch_size, 1, 1, 1, 1]), [FLAGS.batch_size])
 
     # depth map inference
-    init_depth_map, prob_map = inference_mem(input_images, input_cams, FLAGS.max_d, depth_start, depth_interval)
+    init_depth_map, prob_map = inference_mem(stride_images, input_cams, FLAGS.max_d, depth_start, depth_interval)
 
     # refinement 
-    ref_image = tf.squeeze(tf.slice(input_images, [0, 0, 0, 0, 0], [-1, 1, -1, -1, 3]), axis=1)
+    ref_image = tf.squeeze(tf.slice(stride_images, [0, 0, 0, 0, 0], [-1, 1, -1, -1, 3]), axis=1)
     depth_map = depth_refine(init_depth_map, ref_image, FLAGS.max_d, depth_start, depth_interval)
                                             
     # init option
