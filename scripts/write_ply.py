@@ -22,7 +22,7 @@ PROJECT='nbmtech'
 # OUTPUT_FOLDER = '/Users/jae/Research/outputs/{}'.format(PROJECT)
 
 MVS_OUTPUT_PATH = '/home/ubuntu/output/{}/depths_mvsnet'.format(PROJECT)
-OUTPUT_FOLDER = '/home/ubuntu/pointcloud/{}'.format(PROJECT)
+OUTPUT_FOLDER = '/home/ubuntu/pointcloud/{}_test'.format(PROJECT)
 
 mkdirp(OUTPUT_FOLDER)
 
@@ -104,7 +104,7 @@ def post_process(cameras, depth_maps, prob_maps):
     # perform photometric verification
     logging.info('[POST PROCESS] verifying photometric verification...')
     photometric_verified = np.where(prob_maps < 0.8, 0, depth_maps)
-    # return photometric_verified
+    return photometric_verified
     logging.info('[POST PROCESS] photometric verification verified!')
 
     # perform geoemtric verification

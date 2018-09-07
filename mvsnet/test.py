@@ -122,7 +122,7 @@ def mvsnet_pipeline(mvs_list):
 
     # Training and validation generators
     mvs_generator = iter(MVSGenerator(mvs_list, FLAGS.view_num))
-    generator_data_type = (tf.float32, tf.float32, tf.float32, tf.int32)    
+    generator_data_type = (tf.float32, tf.float32, tf.float32, tf.float32, tf.int32)    
     # Datasets from generators
     mvs_set = tf.data.Dataset.from_generator(lambda: mvs_generator, generator_data_type)
     mvs_set = mvs_set.batch(FLAGS.batch_size)
@@ -199,7 +199,7 @@ def mvsnet_pipeline(mvs_list):
             depth_map_path = output_folder + ('/%08d.pfm' % out_index)
             init_depth_map_path = output_folder + ('/%08d_init.pfm' % out_index)
             prob_map_path = output_folder + ('/%08d_prob.pfm' % out_index)
-            out_ref_image_path = output_folder + ('/%08d.png' % out_index)
+            out_ref_image_path = output_folder + ('/%08d.jpg' % out_index)
             out_ref_cam_path = output_folder + ('/%08d.txt' % out_index)
 
             # save output

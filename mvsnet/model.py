@@ -43,16 +43,20 @@ def get_propability_map(cv, depth_map, depth_start, depth_interval):
 
     # d coordinate (floored and ceiled), batched & flattened
     d_coordinates = tf.reshape((depth_map - depth_start) / depth_interval, [-1])
-    d_coordinates_left0 = tf.clip_by_value(tf.cast(tf.floor(d_coordinates), 'int32'), 0, depth)
-    d_coordinates_left1 = tf.clip_by_value(d_coordinates_left0 - 1, 0, depth)
-    d_coordinates1_right0 = tf.clip_by_value(tf.cast(tf.ceil(d_coordinates), 'int32'), 0, depth)
-    d_coordinates1_right1 = tf.clip_by_value(d_coordinates1_right0 + 1, 0, depth)
+    d_coordinates_left0 = tf.clip_by_value(tf.cast(tf.floor(d_coordinates), 'int32'), 0, depth - 1)
+    d_coordinates_left1 = tf.clip_by_value(d_coordinates_left0 - 1, 0, depth - 1)
+    d_coordinates1_right0 = tf.clip_by_value(tf.cast(tf.ceil(d_coordinates), 'int32'), 0, depth - 1)
+    d_coordinates1_right1 = tf.clip_by_value(d_coordinates1_right0 + 1, 0, depth - 1)
 
     # voxel coordinates
-    voxel_coordinates_left0 = tf.stack([b_coordinates, d_coordinates_left0, y_coordinates, x_coordinates], axis=1)
-    voxel_coordinates_left1 = tf.stack([b_coordinates, d_coordinates_left1, y_coordinates, x_coordinates], axis=1)
-    voxel_coordinates_right0 = tf.stack([b_coordinates, d_coordinates1_right0, y_coordinates, x_coordinates], axis=1)
-    voxel_coordinates_right1 = tf.stack([b_coordinates, d_coordinates1_right1, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_left0 = tf.stack(
+        [b_coordinates, d_coordinates_left0, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_left1 = tf.stack(
+        [b_coordinates, d_coordinates_left1, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_right0 = tf.stack(
+        [b_coordinates, d_coordinates1_right0, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_right1 = tf.stack(
+        [b_coordinates, d_coordinates1_right1, y_coordinates, x_coordinates], axis=1)
 
     # get probability image by gathering and interpolation
     prob_map_left0 = tf.gather_nd(cv, voxel_coordinates_left0)
@@ -240,8 +244,11 @@ def inference_mem(images, cams, depth_num, depth_start, depth_interval, is_maste
     # probability map
     prob_map = get_propability_map(probability_volume, estimated_depth_map, depth_start, depth_interval)
 
+    filtered_depth_map = tf.cast(tf.greater_equal(prob_map, 0.8), dtype='float32') * estimated_depth_map
 
-    return estimated_depth_map, prob_map#, filtered_depth_map, probability_volume
+    return filtered_depth_map, prob_map
+    # return estimated_depth_map, prob_map
+
 
 def depth_refine(init_depth_map, image, depth_num, depth_start, depth_interval, is_master_gpu=True):
     """ refine depth image with the image """
