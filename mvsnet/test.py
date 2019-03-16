@@ -49,7 +49,7 @@ tf.app.flags.DEFINE_integer('batch_size', 1,
 
 # params for config
 tf.app.flags.DEFINE_string('pretrained_model_ckpt_path', 
-                           '/data/dtu/tf_model/mvsnet_arxiv/model.ckpt',
+                           '/home/jae/Research/MVSNet/model/model.ckpt',
                            """Path to restore the model.""")
 tf.app.flags.DEFINE_integer('ckpt_step', 70000,
                             """ckpt step.""")
@@ -175,6 +175,8 @@ def mvsnet_pipeline(mvs_list):
     # GPU grows incrementally
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    config.gpu_options.per_process_gpu_memory_fraction = 2.0
+    # config.gpu_options.experimental.use_unified_memory = True
 
     with tf.Session(config=config) as sess:   
 
@@ -221,7 +223,7 @@ def mvsnet_pipeline(mvs_list):
             depth_map_path = output_folder + ('/%08d.pfm' % out_index)
             init_depth_map_path = output_folder + ('/%08d_init.pfm' % out_index)
             prob_map_path = output_folder + ('/%08d_prob.pfm' % out_index)
-            out_ref_image_path = output_folder + ('/%08d.jpg' % out_index)
+            out_ref_image_path = output_folder + ('/%08d.png' % out_index)
             out_ref_cam_path = output_folder + ('/%08d.txt' % out_index)
 
             # save output

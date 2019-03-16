@@ -407,7 +407,7 @@ def gen_pipeline_mvs_list(dense_folder):
         # ref image
         ref_index = int(cluster_list[pos])
         pos += 1
-        ref_image_path = os.path.join(image_folder, ('%08d.jpg' % ref_index))
+        ref_image_path = os.path.join(image_folder, ('%08d.png' % ref_index))
         ref_cam_path = os.path.join(cam_folder, ('%08d_cam.txt' % ref_index))
         paths.append(ref_image_path)
         paths.append(ref_cam_path)
@@ -417,7 +417,7 @@ def gen_pipeline_mvs_list(dense_folder):
         check_view_num = min(FLAGS.view_num - 1, all_view_num)
         for view in range(check_view_num):
             view_index = int(cluster_list[pos + 2 * view])
-            view_image_path = os.path.join(image_folder, ('%08d.jpg' % view_index))
+            view_image_path = os.path.join(image_folder, ('%08d.png' % view_index))
             view_cam_path = os.path.join(cam_folder, ('%08d_cam.txt' % view_index))
             paths.append(view_image_path)
             paths.append(view_cam_path)

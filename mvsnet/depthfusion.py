@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dense_folder', type=str, default = '')
-    parser.add_argument('--fusibile_exe_path', type=str, default = '/home/yoyo/Documents/software/fusibile/fusibile')
+    parser.add_argument('--fusibile_exe_path', type=str, default = '/home/jae/Research/fusibile/build/fusibile')
     parser.add_argument('--prob_threshold', type=float, default = '0.8')
     parser.add_argument('--disp_threshold', type=float, default = '0.25')
     parser.add_argument('--num_consistent', type=float, default = '3')
