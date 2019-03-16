@@ -27,11 +27,11 @@ from model import inference, mvsnet_loss, depth_refine
 from homography_warping import get_homographies, homography_warping
 
 # params for datasets
-tf.app.flags.DEFINE_string('dtu_data_root', '/data/dtu/', 
+tf.app.flags.DEFINE_string('dtu_data_root', '/home/ubuntu/mvs/data/mvs_training/dtu/', 
                            """Path to dtu dataset.""")
-tf.app.flags.DEFINE_string('log_dir', '/data/tf_log',
+tf.app.flags.DEFINE_string('log_dir', '/home/ubuntu/mvs/log/',
                            """Path to store the log.""")
-tf.app.flags.DEFINE_string('save_dir', '/data/tf_model',
+tf.app.flags.DEFINE_string('save_dir', '/home/ubuntu/mvs/model/',
                            """Path to save the model.""")
 tf.app.flags.DEFINE_boolean('train_dtu', True, 
                             """Whether to train.""")
@@ -312,5 +312,15 @@ def main(argv=None):  # pylint: disable=unused-argument
 
 
 if __name__ == '__main__':
-    print ('Training MVSNet with %d views' % FLAGS.view_num)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ckpt_step', type=int, default = FLAGS.ckpt_step)
+    parser.add_argument('--view_num', type=int, default = FLAGS.view_num)
+    args = parser.parse_args()
+
+    FLAGS.ckpt_step = args.ckpt_step
+    FLAGS.view_num = args.view_num
+    print ('Training MVSNet with %d views' % args.view_num)
+
+
     tf.app.run()

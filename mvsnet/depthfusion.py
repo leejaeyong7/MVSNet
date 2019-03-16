@@ -129,7 +129,8 @@ def mvsnet_to_gipuma(dense_folder, gipuma_point_folder):
         os.mkdir(gipuma_image_folder)
 
     # convert cameras 
-    image_names = os.listdir(image_folder)
+    file_names = sorted(os.listdir(depth_folder))
+    image_names = [file_name for file_name in file_names if file_name.endswith('.jpg') or file_name.endswith('.png')]
     for image_name in image_names:
         image_prefix = os.path.splitext(image_name)[0]
         in_cam_file = os.path.join(depth_folder, image_prefix+'.txt')
@@ -137,16 +138,15 @@ def mvsnet_to_gipuma(dense_folder, gipuma_point_folder):
         mvsnet_to_gipuma_cam(in_cam_file, out_cam_file)
 
     # copy images to gipuma image folder    
-    image_names = os.listdir(image_folder)
     for image_name in image_names:
+        image_prefix = os.path.splitext(image_name)[0]
         in_image_file = os.path.join(depth_folder, image_name)
-        out_image_file = os.path.join(gipuma_image_folder, image_name)
+        out_image_file = os.path.join(gipuma_image_folder, image_prefix + '.jpg')
         shutil.copy(in_image_file, out_image_file)    
 
     # convert depth maps and fake normal maps
     gipuma_prefix = '2333__'
     for image_name in image_names:
-
         image_prefix = os.path.splitext(image_name)[0]
         sub_depth_folder = os.path.join(gipuma_point_folder, gipuma_prefix+image_prefix)
         if not os.path.isdir(sub_depth_folder):
