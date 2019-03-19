@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 """
 Copyright 2018, Yao Yao, HKUST.
@@ -12,6 +13,7 @@ import sys
 import math
 import argparse
 import numpy as np
+from test_dataset import MVSDataset
 
 import cv2
 #import matplotlib.pyplot as plt
@@ -23,7 +25,7 @@ from preprocess import *
 from model import *
 
 # params for datasets
-tf.app.flags.DEFINE_string('dense_folder', None, 
+tf.app.flags.DEFINE_string('target_set', None, 
                            """Root path to dense folder.""")
 # params for input
 tf.app.flags.DEFINE_integer('view_num', 5,
@@ -49,77 +51,26 @@ tf.app.flags.DEFINE_integer('batch_size', 1,
 
 # params for config
 tf.app.flags.DEFINE_string('pretrained_model_ckpt_path', 
-                           '/home/ubuntu/model/model.ckpt',
+                           '/home/ubuntu/Research/MVSNet/model/model.ckpt',
                            """Path to restore the model.""")
 tf.app.flags.DEFINE_integer('ckpt_step', 70000,
                             """ckpt step.""")
 FLAGS = tf.app.flags.FLAGS
 
-class MVSGenerator:
-    """ data generator class, tf only accept generator without param """
-    def __init__(self, sample_list, view_num):
-        self.sample_list = sample_list
-        self.view_num = view_num
-        self.sample_num = len(sample_list)
-        self.counter = 0
-    
-    def __iter__(self):
-        for data in self.sample_list: 
-            # read input data
-            images = []
-            cams = []
-            selected_view_num = int(len(data) / 2)
-
-            for view in range(min(self.view_num, selected_view_num)):
-                image_file = file_io.FileIO(data[2 * view], mode='r')
-                image = scipy.misc.imread(image_file, mode='RGB')
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                cam_file = file_io.FileIO(data[2 * view + 1], mode='r')
-                cam = load_cam(cam_file)
-                cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
-                images.append(image)
-                cams.append(cam)
-
-            if selected_view_num < self.view_num:
-                for view in range(selected_view_num, self.view_num):
-                    image_file = file_io.FileIO(data[0], mode='r')
-                    image = scipy.misc.imread(image_file, mode='RGB')
-                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    cam_file = file_io.FileIO(data[1], mode='r')
-                    cam = load_cam(cam_file)
-                    cam[1][3][1] = cam[1][3][1] * FLAGS.interval_scale
-                    images.append(image)
-                    cams.append(cam)
-
-            # determine a proper range to stride inputs
-            h = images[0].shape[0]
-            w = images[0].shape[1]
-
-            stride_groups = stride_mvs_input(images, cams,
-                                                w, h,
-                                                FLAGS.max_w, FLAGS.max_h)
-
-            for stride_group in stride_groups:
-                stride_images = stride_group['images']
-                scaled_images = [scale_image(np.copy(img), scale=FLAGS.sample_scale) for img in stride_images]
-                scaled_cameras = scale_mvs_camera(stride_group['cameras'], scale=FLAGS.sample_scale)
-                stride_np_images = np.stack(stride_images, axis=0)
-                scaled_np_images = np.stack(scaled_images, axis=0)
-                scaled_np_cameras = np.stack(scaled_cameras, axis=0)
-                yield (stride_np_images, stride_np_images, scaled_np_cameras, self.counter)
-                self.counter += 1
-
-def mvsnet_pipeline():
+def mvsnet_pipeline(dataset_dir):
     """ mvsnet in altizure pipeline """
-
-    # create output folder
-    output_folder = os.path.join(FLAGS.dense_folder, 'depths_mvsnet')
+    output_root = '/data/outputs/eth3d/mvsnet/'
+    output_dir = os.path.join(output_root, FLAGS.target_set)
+    output_folder = os.path.join(output_dir,'depths_mvsnet')
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
 
     # Training generator
-    mvs_generator = iter(MVSGenerator(mvs_list, FLAGS.view_num))
-    generator_data_type = (tf.float32, tf.float32, tf.float32, tf.float32, tf.int32)
+    dataset = MVSDataset(dataset_dir, FLAGS.view_num, FLAGS.max_d, FLAGS.max_w, FLAGS.max_h, FLAGS.target_set)
+    mvs_generator = iter(dataset)
+    generator_data_type = (tf.float32, tf.float32, tf.float32, tf.int32)
     mvs_set = tf.data.Dataset.from_generator(lambda: mvs_generator, generator_data_type)
     mvs_set = mvs_set.batch(FLAGS.batch_size)
     mvs_set = mvs_set.prefetch(buffer_size=1)
@@ -128,6 +79,8 @@ def mvsnet_pipeline():
     mvs_iterator = mvs_set.make_initializable_iterator()
     
     # data
+    test = mvs_iterator.get_next()
+    print(len(test))
     stride_images, input_images, input_cams, image_index = mvs_iterator.get_next()
     stride_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
     input_images.set_shape(tf.TensorShape([None, FLAGS.view_num, None, None, 3]))
@@ -216,7 +169,7 @@ def mvsnet_pipeline():
 
 def main(_):  # pylint: disable=unused-argument
     # mvsnet inference
-    mvsnet_pipeline()
+    mvsnet_pipeline('/mnt/data/datasets/eth3d/train/sets')
 
 
 if __name__ == '__main__':
@@ -227,5 +180,4 @@ if __name__ == '__main__':
     FLAGS.target_set= args.target_set
     FLAGS.view_num = args.view_num
     print ('Testing MVSNet with %d views' % args.view_num)
-
     tf.app.run()

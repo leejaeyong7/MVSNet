@@ -21,7 +21,7 @@ class MVSDataset():
             images/
             pair.txt
     """
-    def __init__(self, dataset_dir, num_neighbors, depth_interval, image_width, image_height, mode):
+    def __init__(self, dataset_dir, num_neighbors, depth_interval, image_width, image_height, mode, target_set):
         self.dataset_dir = dataset_dir
         self.permute_neighbor = True
         self.depth_interval = depth_interval
@@ -32,7 +32,10 @@ class MVSDataset():
         self.mode = mode
         self.sample_list = []
 
-        target_sets = os.listdir(dataset_dir)
+        if(not target_set):
+            target_sets = os.listdir(dataset_dir)
+        else:
+            target_sets = [target_set]
         # sample list should be array of path object where
         # paths = {
         #   images: [path],
