@@ -109,19 +109,24 @@ class MVSDataset():
 
     def __iter__(self):
         while True:
-            for index in len(self.sample_list):
+            for index in range(len(self.sample_list)):
                 paths = self.sample_list[index]
                 image_paths = paths['images']
                 camera_paths = paths['cameras']
 
                 # randomly choose one of the neighbors
                 if(self.mode == 'train'):
-                    n_index = 1
-                    if(self.permute_neighbor):
-                        num_neighbors = len(image_paths) - 1
-                        n_index = random.choice(range(num_neighbors))
-                    image_paths = [image_paths[0], image_paths[n_index+1]]
-                    camera_paths = [camera_paths[0], camera_paths[n_index+1]]
+                    new_image_paths = []
+                    new_camera_paths = []
+                    num_neighbors = len(image_paths) - 1
+                    n_indices = random.sample(range(num_neighbors),
+                                              self.num_neighbors)
+                    for n_index in n_indices:
+                      new_image_paths.append(image_paths[n_index + 1])
+                      new_camera_paths.append(camera_paths[n_index + 1])
+
+                    image_paths = new_image_paths
+                    camera_paths = new_camera_paths
 
                 images = [load_image(image_path)for image_path in image_paths]
                 ref_width = images[0].width
@@ -131,7 +136,7 @@ class MVSDataset():
                 intrinsics = [camera[0] for camera in cameras]
                 intrinsics = [
                     resize_intrinsics(intrinsic,
-                                      self.image_width, self.image_height,
+                                      self.image_width/4, self.image_height/4,
                                       ref_width, ref_height)
                     for intrinsic in intrinsics
                 ]
@@ -141,9 +146,12 @@ class MVSDataset():
                 depth_max = cameras[0][5]
                 np_intrinsics = np.stack(intrinsics)
                 np_extrinsics = np.stack(extrinsics)
-                np_images = np.stack([np.fromarray(image) for image in images])
+                np_images = np.stack([
+                  center_image(np.asarray(image))
+                  for image in images
+                ])
 
-                np_cams = np.zeros(self.num_neighbors, 2, 4, 4)
+                np_cams = np.zeros((self.num_neighbors, 2, 4, 4))
                 np_cams[:, 0] = np_extrinsics
                 np_cams[:, 1, 0:3, 0:3] = np_intrinsics
                 np_cams[:, 1, 3, 0] = depth_min
@@ -152,7 +160,7 @@ class MVSDataset():
                 # optionally load depth / normal if mode is training
                 if(self.mode == 'train' or self.mode == 'eval'):
                     depth_path = paths['depth']
-                    np_depth = resize_depth(load_depth(depth_path), self.image_width, self.image_height)
-                    yield (np_images, np_cams, np_depth)
+                    np_depth = resize_depth(load_depth(depth_path), self.image_width/4, self.image_height/4)
+                    yield (np_images, np_cams, np_depth[:, :, None])
                 else:
                     yield (np_images, np_cams)

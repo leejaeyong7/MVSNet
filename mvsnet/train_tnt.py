@@ -30,9 +30,9 @@ from homography_warping import get_homographies, homography_warping
 # params for datasets
 tf.app.flags.DEFINE_string('dtu_data_root', '/data/dtu/',
                            """Path to dtu dataset.""")
-tf.app.flags.DEFINE_string('log_dir', '/data/mvsnet/logs/eth3d',
+tf.app.flags.DEFINE_string('log_dir', '/data/mvsnet/logs/tnt',
                            """Path to store the log.""")
-tf.app.flags.DEFINE_string('save_dir', '/data/mvsnet/models/eth3d',
+tf.app.flags.DEFINE_string('save_dir', '/data/mvsnet/models/tnt',
                            """Path to save the model.""")
 tf.app.flags.DEFINE_boolean('train_dtu', True, 
                             """Whether to train.""")
@@ -56,7 +56,7 @@ tf.app.flags.DEFINE_float('interval_scale', 1.6,
                             """Downsample scale for building cost volume.""")
 tf.app.flags.DEFINE_integer('batch_size', 1,
                             """training batch size""")
-tf.app.flags.DEFINE_integer('epoch', 15,
+tf.app.flags.DEFINE_integer('epoch', 12,
                             """training epoch""")
 tf.app.flags.DEFINE_float('val_ratio', 0, 
                           """ratio of validation set when splitting dataset.""")
@@ -115,7 +115,7 @@ def average_gradients(tower_grads):
         grad = tf.reduce_mean(grad, 0)
 
         # clip gradients
-        grad = tf.clip_by_value(grad, -50, 50)
+        # grad = tf.clip_by_value(grad, -50, 50)
 
         # Keep in mind that the Variables are redundant because they are shared
         # across towers. So .. we will just return the first tower's pointer to
@@ -150,7 +150,7 @@ def train(dataset_dir):
         tower_grads = []
         # for i in xrange(FLAGS.num_gpus):
         i = 0
-        with tf.device('/gpu:%d' % 4):
+        with tf.device('/gpu:%d' % 5):
             with tf.name_scope('Model_tower%d' % i) as scope:
                 # generate data
                 images, cams, depth_image = training_iterator.get_next()
@@ -272,7 +272,7 @@ def train(dataset_dir):
 def main(argv=None):  # pylint: disable=unused-argument
     """ program entrance """
     # Training entrance.
-    train('/mnt/data/datasets/eth3d/train/sets/')
+    train('/mnt/data/datasets/tnt/train/sets/')
 
 
 if __name__ == '__main__':

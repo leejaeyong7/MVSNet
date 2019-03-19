@@ -25,8 +25,8 @@ def scale_intrinsics(intrinsic, scale=0.25):
     return intrinsic
 
 def resize_intrinsics(intrinsic, W, H, OW, OH):
-    sx = W / OW
-    sy = H / OH
+    sx = float(W) / float(OW)
+    sy = float(H) / float(OH)
 
     intrinsic[0:1, 0:3] *= sx
     intrinsic[1:2, 0:3] *= sy
@@ -50,6 +50,12 @@ def resize_normal(normal, W, H):
     resized_normal = cv2.resize(normal, dsize=(W, H),interpolation=cv2.INTER_NEAREST)
     return resized_normal / np.linalg.norm(resized_normal, axis=2)[:, :, None]
 
+def center_image(img):
+    """ normalize image input """
+    img = img.astype(np.float32)
+    var = np.var(img, axis=(0,1), keepdims=True)
+    mean = np.mean(img, axis=(0,1), keepdims=True)
+    return (img - mean) / (np.sqrt(var) + 0.00000001)
 
 def load_image(image_path):
     return Image.open(image_path)
