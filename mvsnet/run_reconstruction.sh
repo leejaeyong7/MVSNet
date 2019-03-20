@@ -1,6 +1,7 @@
 #!/bin/bash
-for d in /data/output-dtu/*; do
-  echo "processing $d"
-  python test.py --dense_folder $d
-  python depthfusion.py --dense_folder $d
+ETH=(courtyard delivery_area electro facade kicker meadow office pipes playground relief relief_2 terrace terrains)
+for i in "${ETH[@]}"; do
+  echo "processing $i"
+  python test_tnt.py --target_set=${i}
+  python depthfusion.py --dense_folder /data/outputs/eth3d/mvsnet/${i}/
 done

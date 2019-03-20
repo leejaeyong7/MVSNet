@@ -56,12 +56,11 @@ class MVSDataset():
             # since we store image with sequential ids, image ids are simple
             # list of range
             image_ids = list(range(len(image_list)))
-            if(mode == 'train' or mode =='eval'):
-                with open(cluster_file, 'r') as cluster_file:
-                    cluster_list = [
-                        [int(w) for w in line.split()]
-                        for line in cluster_file.readlines()
-                    ]
+            with open(cluster_file, 'r') as cluster_file:
+                cluster_list = [
+                    [int(w) for w in line.split()]
+                    for line in cluster_file.readlines()
+                ]
 
             for image_id in image_ids:
                 paths = {
@@ -84,21 +83,10 @@ class MVSDataset():
 
                 ref_depth_name = '%06d_cam.npz' % image_id
                 ref_depth_path = path.join(depth_dir, ref_depth_name)
-                if(mode == 'train'):
-                    # choose 10 best neighbors
-                    paths['depth'] = ref_depth_path
-                    neighbors = cluster_list[image_id][:10]
-                    for n in neighbors:
-                        src_image_name = '%06d.png' % n
-                        src_camera_name = '%06d_cam.txt' % n
-                        src_image_path = path.join(image_dir, src_image_name)
-                        src_camera_path = path.join(camera_dir,
-                                                    src_camera_name)
-                        paths['images'].append(src_image_path)
-                        paths['cameras'].append(src_camera_path)
-                elif(mode == 'eval'):
-                    paths['depth'] = ref_depth_path
-                    n = cluster_list[image_id][:10][0]
+                # choose 10 best neighbors
+                paths['depth'] = ref_depth_path
+                neighbors = cluster_list[image_id][:num_neighbors-1]
+                for n in neighbors:
                     src_image_name = '%06d.png' % n
                     src_camera_name = '%06d_cam.txt' % n
                     src_image_path = path.join(image_dir, src_image_name)
@@ -112,52 +100,39 @@ class MVSDataset():
         return len(self.sample_list)
 
     def __iter__(self):
-        while True:
-            for index in range(len(self.sample_list)):
-                paths = self.sample_list[index]
-                image_paths = paths['images']
-                camera_paths = paths['cameras']
+        for index in range(len(self.sample_list)):
+            paths = self.sample_list[index]
+            image_paths = paths['images']
+            camera_paths = paths['cameras']
 
-                # randomly choose one of the neighbors
-                new_image_paths = []
-                new_camera_paths = []
-                num_neighbors = len(image_paths) - 1
-                n_indices = range(num_neighbors)
-                for n_index in n_indices:
-                  new_image_paths.append(image_paths[n_index + 1])
-                  new_camera_paths.append(camera_paths[n_index + 1])
+            images = [load_image(image_path)for image_path in image_paths]
+            ref_width = images[0].width
+            ref_height = images[0].height
+            images = [resize_image(image, self.image_width, self.image_height) for image in images]
+            cameras = [load_camera(camera) for camera in camera_paths]
+            intrinsics = [camera[0] for camera in cameras]
+            intrinsics = [
+                resize_intrinsics(intrinsic,
+                                  self.image_width/4, self.image_height/4,
+                                  ref_width, ref_height)
+                for intrinsic in intrinsics
+            ]
+            extrinsics = [camera[1] for camera in cameras]
 
-                image_paths = new_image_paths
-                camera_paths = new_camera_paths
+            depth_min = cameras[0][4]
+            depth_max = cameras[0][5]
+            np_intrinsics = np.stack(intrinsics)
+            np_extrinsics = np.stack(extrinsics)
+            np_images = np.stack([
+              center_image(np.asarray(image))
+              for image in images
+            ])
 
-                images = [load_image(image_path)for image_path in image_paths]
-                ref_width = images[0].width
-                ref_height = images[0].height
-                images = [resize_image(image, self.image_width, self.image_height) for image in images]
-                cameras = [load_camera(camera) for camera in camera_paths]
-                intrinsics = [camera[0] for camera in cameras]
-                intrinsics = [
-                    resize_intrinsics(intrinsic,
-                                      self.image_width/4, self.image_height/4,
-                                      ref_width, ref_height)
-                    for intrinsic in intrinsics
-                ]
-                extrinsics = [camera[1] for camera in cameras]
+            np_cams = np.zeros((self.num_neighbors, 2, 4, 4))
+            np_cams[:, 0] = np_extrinsics
+            np_cams[:, 1, 0:3, 0:3] = np_intrinsics
+            np_cams[:, 1, 3, 0] = depth_min
+            np_cams[:, 1, 3, 1] = (depth_max - depth_min) / self.depth_interval
 
-                depth_min = cameras[0][4]
-                depth_max = cameras[0][5]
-                np_intrinsics = np.stack(intrinsics)
-                np_extrinsics = np.stack(extrinsics)
-                np_images = np.stack([
-                  center_image(np.asarray(image))
-                  for image in images
-                ])
-
-                np_cams = np.zeros((self.num_neighbors, 2, 4, 4))
-                np_cams[:, 0] = np_extrinsics
-                np_cams[:, 1, 0:3, 0:3] = np_intrinsics
-                np_cams[:, 1, 3, 0] = depth_min
-                np_cams[:, 1, 3, 1] = (depth_max - depth_min) / self.depth_interval
-
-                # optionally load depth / normal if mode is training
-                yield (np_images, np_images, np_cams, index)
+            # optionally load depth / normal if mode is training
+            yield (np_images, np_images, np_cams, index)

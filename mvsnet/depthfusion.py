@@ -159,11 +159,11 @@ def mvsnet_to_gipuma(dense_folder, gipuma_point_folder):
 
 
 def probability_filter(dense_folder, prob_threshold):
-    image_folder = os.path.join(dense_folder, 'images')
     depth_folder = os.path.join(dense_folder, 'depths_mvsnet')
-    
+
     # convert cameras 
-    image_names = os.listdir(image_folder)
+    file_names = sorted(os.listdir(depth_folder))
+    image_names = [file_name for file_name in file_names if file_name.endswith('.jpg') or file_name.endswith('.png')]
     for image_name in image_names:
         image_prefix = os.path.splitext(image_name)[0]
         init_depth_map_path = os.path.join(depth_folder, image_prefix+'_init.pfm')
@@ -182,7 +182,7 @@ def depth_map_fusion(point_folder, fusibile_exe_path, disp_thresh, num_consisten
     cam_folder = os.path.join(point_folder, 'cams')
     image_folder = os.path.join(point_folder, 'images')
     depth_min = 0.001
-    depth_max = 100000
+    depth_max = 10000
     normal_thresh = 360
 
     cmd = fusibile_exe_path
@@ -199,11 +199,15 @@ def depth_map_fusion(point_folder, fusibile_exe_path, disp_thresh, num_consisten
 
     return 
 
+def mkdirp(p):
+    if(not os.path.exists(p)):
+       os.makedirs(p)
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dense_folder', type=str, default = '')
-    parser.add_argument('--fusibile_exe_path', type=str, default = '/home/jae/Research/fusibile/build/fusibile')
+    parser.add_argument('--fusibile_exe_path', type=str, default = '/home/ubuntu/fusibile/build/fusibile')
     parser.add_argument('--prob_threshold', type=float, default = '0.8')
     parser.add_argument('--disp_threshold', type=float, default = '0.25')
     parser.add_argument('--num_consistent', type=float, default = '3')
@@ -214,6 +218,8 @@ if __name__ == '__main__':
     prob_threshold = args.prob_threshold
     disp_threshold = args.disp_threshold
     num_consistent = args.num_consistent
+
+    # copy_metadata(set_folder, dense_folder)
 
     point_folder = os.path.join(dense_folder, 'points_mvsnet')
     if not os.path.isdir(point_folder):
