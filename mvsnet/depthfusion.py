@@ -16,6 +16,7 @@ import re
 import sys
 import shutil
 from struct import *
+from PIL import Image
 
 import cv2
 import numpy as np
@@ -81,7 +82,7 @@ def mvsnet_to_gipuma_cam(in_path, out_path):
     intrinsic[3][3] = 0
     projection_matrix = np.matmul(intrinsic, extrinsic)
     projection_matrix = projection_matrix[0:3][:]
-    
+
     f = open(out_path, "w")
     for i in range(0, 3):
         for j in range(0, 4):
@@ -134,15 +135,23 @@ def mvsnet_to_gipuma(dense_folder, gipuma_point_folder):
     for image_name in image_names:
         image_prefix = os.path.splitext(image_name)[0]
         in_cam_file = os.path.join(depth_folder, image_prefix+'.txt')
-        out_cam_file = os.path.join(gipuma_cam_folder, image_name+'.P')
+        out_cam_file = os.path.join(gipuma_cam_folder, image_prefix + '.jpg'+'.P')
         mvsnet_to_gipuma_cam(in_cam_file, out_cam_file)
 
-    # copy images to gipuma image folder    
+    # copy images to gipuma image folder
     for image_name in image_names:
         image_prefix = os.path.splitext(image_name)[0]
         in_image_file = os.path.join(depth_folder, image_name)
         out_image_file = os.path.join(gipuma_image_folder, image_prefix + '.jpg')
-        shutil.copy(in_image_file, out_image_file)    
+        with Image.open(in_image_file) as img:
+            W = img.width
+            H = img.height
+            np_img = np.array(img.convert('RGB'))
+            new_img = cv2.resize(np_img, dsize=(W//4, H//4),
+                                 interpolation=cv2.INTER_LINEAR)
+            resized_image = Image.fromarray(new_img)
+            resized_image.save(out_image_file)
+        # shutil.copy(in_image_file, out_image_file)
 
     # convert depth maps and fake normal maps
     gipuma_prefix = '2333__'
@@ -181,7 +190,7 @@ def depth_map_fusion(point_folder, fusibile_exe_path, disp_thresh, num_consisten
 
     cam_folder = os.path.join(point_folder, 'cams')
     image_folder = os.path.join(point_folder, 'images')
-    depth_min = 0.001
+    depth_min = 0.00001
     depth_max = 10000
     normal_thresh = 360
 
@@ -207,8 +216,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dense_folder', type=str, default = '')
-    parser.add_argument('--fusibile_exe_path', type=str, default = '/home/ubuntu/fusibile/build/fusibile')
-    parser.add_argument('--prob_threshold', type=float, default = '0.8')
+    parser.add_argument('--fusibile_exe_path', type=str, default = '/home/jae/Research/fusibile/build/fusibile')
+    parser.add_argument('--prob_threshold', type=float, default = '0.2')
     parser.add_argument('--disp_threshold', type=float, default = '0.25')
     parser.add_argument('--num_consistent', type=float, default = '3')
     args = parser.parse_args()

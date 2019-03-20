@@ -21,7 +21,7 @@ class MVSDataset():
             images/
             pair.txt
     """
-    def __init__(self, dataset_dir, num_neighbors, depth_interval, image_width, image_height, mode, target_set):
+    def __init__(self, dataset_dir, num_neighbors, interval_scale, depth_interval, image_width, image_height, mode, target_set):
         self.dataset_dir = dataset_dir
         self.permute_neighbor = True
         self.depth_interval = depth_interval
@@ -145,8 +145,8 @@ class MVSDataset():
                 ]
                 extrinsics = [camera[1] for camera in cameras]
 
-                depth_min = cameras[0][4]
-                depth_max = cameras[0][5]
+                depth_min = cameras[0][4][0]
+                depth_max = cameras[0][5][0]
                 np_intrinsics = np.stack(intrinsics)
                 np_extrinsics = np.stack(extrinsics)
                 np_images = np.stack([
@@ -155,15 +155,20 @@ class MVSDataset():
                 ])
 
                 np_cams = np.zeros((self.num_neighbors, 2, 4, 4))
+                depth_interval = (depth_max - depth_min) / self.depth_interval
+                depth_start = depth_min + depth_interval
+                depth_end = depth_start + depth_interval * (self.depth_interval - 2)
                 np_cams[:, 0] = np_extrinsics
                 np_cams[:, 1, 0:3, 0:3] = np_intrinsics
                 np_cams[:, 1, 3, 0] = depth_min
-                np_cams[:, 1, 3, 1] = (depth_max - depth_min) / self.depth_interval
+                np_cams[:, 1, 3, 1] = depth_interval
 
                 # optionally load depth / normal if mode is training
                 if(self.mode == 'train' or self.mode == 'eval'):
                     depth_path = paths['depth']
-                    np_depth = resize_depth(load_depth(depth_path), self.image_width/4, self.image_height/4)
-                    yield (np_images, np_cams, np_depth[:, :, None])
+                    np_depth = resize_depth(load_depth(depth_path), self.image_width/4, self.image_height/4)[:, :, None]
+                    masked_depth = mask_depth_image(np_depth, depth_start, depth_end)
+                    print(np_depth.min(), np_depth.max(), depth_start, depth_end)
+                    yield (np_images, np_cams, masked_depth)
                 else:
                     yield (np_images, np_cams)

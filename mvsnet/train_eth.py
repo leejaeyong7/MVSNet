@@ -128,7 +128,7 @@ def average_gradients(tower_grads):
 def train(dataset_dir):
     """ training mvsnet """
     with tf.device('/cpu:0'):
-        dataset = MVSDataset(dataset_dir, FLAGS.view_num, FLAGS.max_d, FLAGS.max_w, FLAGS.max_h, 'train')
+        dataset = MVSDataset(dataset_dir, FLAGS.view_num,FLAGS.interval_scale, FLAGS.max_d, FLAGS.max_w, FLAGS.max_h, 'train')
         training_sample_size = len(dataset)
         ########## data iterator #########
         # training generators

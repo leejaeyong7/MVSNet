@@ -53,9 +53,18 @@ def resize_normal(normal, W, H):
 def center_image(img):
     """ normalize image input """
     img = img.astype(np.float32)
+    print(img.shape)
     var = np.var(img, axis=(0,1), keepdims=True)
     mean = np.mean(img, axis=(0,1), keepdims=True)
     return (img - mean) / (np.sqrt(var) + 0.00000001)
+
+def mask_depth_image(depth_image, min_depth, max_depth):
+    """ mask out-of-range pixel to zero """
+    # print ('mask min max', min_depth, max_depth)
+    ret, depth_image = cv2.threshold(depth_image, min_depth, 100000, cv2.THRESH_TOZERO)
+    ret, depth_image = cv2.threshold(depth_image, max_depth, 100000, cv2.THRESH_TOZERO_INV)
+    depth_image = np.expand_dims(depth_image, 2)
+    return depth_image
 
 def load_image(image_path):
     return Image.open(image_path)

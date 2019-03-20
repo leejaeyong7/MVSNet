@@ -37,27 +37,27 @@ tf.app.flags.DEFINE_boolean('train_dtu', True,
                             """Whether to train.""")
 
 # params for training
-tf.app.flags.DEFINE_integer('num_gpus', 1, 
+tf.app.flags.DEFINE_integer('num_gpus', 1,
                             """Number of GPUs.""")
-tf.app.flags.DEFINE_integer('view_num', 3, 
+tf.app.flags.DEFINE_integer('view_num', 3,
                             """Number of images (1 ref image and view_num - 1 view images).""")
-tf.app.flags.DEFINE_integer('max_d', 128, 
+tf.app.flags.DEFINE_integer('max_d', 128,
                             """Maximum depth step when training.""")
-tf.app.flags.DEFINE_integer('max_w', 640, 
+tf.app.flags.DEFINE_integer('max_w', 640,
                             """Maximum image width when training.""")
-tf.app.flags.DEFINE_integer('max_h', 512, 
+tf.app.flags.DEFINE_integer('max_h', 512,
                             """Maximum image height when training.""")
-tf.app.flags.DEFINE_float('sample_scale', 0.25, 
+tf.app.flags.DEFINE_float('sample_scale', 0.25,
                             """Downsample scale for building cost volume.""")
-tf.app.flags.DEFINE_integer('base_image_size', 128, 
+tf.app.flags.DEFINE_integer('base_image_size', 128,
                             """Base image size to fit the network.""")
-tf.app.flags.DEFINE_float('interval_scale', 1.6, 
+tf.app.flags.DEFINE_float('interval_scale', 1.6,
                             """Downsample scale for building cost volume.""")
-tf.app.flags.DEFINE_integer('batch_size', 1, 
+tf.app.flags.DEFINE_integer('batch_size', 1,
                             """training batch size""")
-tf.app.flags.DEFINE_integer('epoch', 6, 
+tf.app.flags.DEFINE_integer('epoch', 6,
                             """training epoch""")
-tf.app.flags.DEFINE_float('val_ratio', 0, 
+tf.app.flags.DEFINE_float('val_ratio', 0,
                           """ratio of validation set when splitting dataset.""")
 
 # params for config
